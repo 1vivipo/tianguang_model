@@ -1,6 +1,6 @@
 /**
- * 天光AI - 训练器模块
- * 基于TensorFlow.js的轻量级语言模型训练
+ * 天光AI - 训练器模块（优化版）
+ * 支持快速训练模式
  */
 
 class TianguangTrainer {
@@ -8,17 +8,64 @@ class TianguangTrainer {
         this.model = null;
         this.tokenizer = null;
         this.isTraining = false;
+        this.shouldStop = false;
+        
+        // 默认配置（快速模式）
         this.config = {
             vocabSize: 500,
-            embedDim: 64,
-            hiddenDim: 128,
-            seqLength: 32,
-            batchSize: 4,
-            epochs: 100,
-            learningRate: 0.01
+            embedDim: 32,      // 减小
+            hiddenDim: 64,     // 减小
+            seqLength: 16,     // 减小
+            batchSize: 8,
+            epochs: 20,        // 减少轮次
+            learningRate: 0.02, // 增大学习率
+            maxDataSize: 500    // 限制数据量
         };
+        
         this.trainingData = [];
         this.history = [];
+    }
+
+    // 设置训练模式
+    setMode(mode) {
+        switch(mode) {
+            case 'quick':
+                this.config = {
+                    ...this.config,
+                    embedDim: 32,
+                    hiddenDim: 64,
+                    seqLength: 16,
+                    epochs: 20,
+                    learningRate: 0.02,
+                    maxDataSize: 500
+                };
+                Utils.log('已切换到快速模式');
+                break;
+            case 'balanced':
+                this.config = {
+                    ...this.config,
+                    embedDim: 48,
+                    hiddenDim: 96,
+                    seqLength: 24,
+                    epochs: 30,
+                    learningRate: 0.015,
+                    maxDataSize: 1000
+                };
+                Utils.log('已切换到平衡模式');
+                break;
+            case 'full':
+                this.config = {
+                    ...this.config,
+                    embedDim: 64,
+                    hiddenDim: 128,
+                    seqLength: 32,
+                    epochs: 50,
+                    learningRate: 0.01,
+                    maxDataSize: 2000
+                };
+                Utils.log('已切换到完整模式');
+                break;
+        }
     }
 
     // 初始化
@@ -45,6 +92,7 @@ class TianguangTrainer {
     // 创建模型
     async createModel() {
         Utils.log('创建模型...');
+        Utils.log(`配置: embed=${this.config.embedDim}, hidden=${this.config.hiddenDim}, seqLen=${this.config.seqLength}`);
 
         const model = tf.sequential();
 
@@ -55,11 +103,12 @@ class TianguangTrainer {
             inputLength: this.config.seqLength
         }));
 
-        // GRU层（比LSTM更轻量）
+        // GRU层
         model.add(tf.layers.gru({
             units: this.config.hiddenDim,
             returnSequences: true,
-            dropout: 0.1
+            dropout: 0.1,
+            recurrentInitializer: 'glorotNormal'
         }));
 
         // 输出层
@@ -84,57 +133,48 @@ class TianguangTrainer {
         return model;
     }
 
-    // 准备数据 - 修复版本：确保每条样本长度严格等于seqLength
+    // 准备数据（优化版）
     prepareData(texts) {
         Utils.log('准备训练数据...');
-        Utils.log(`目标序列长度: ${this.config.seqLength}`);
+        
+        // 限制数据量
+        let limitedTexts = texts;
+        if (texts.length > this.config.maxDataSize) {
+            // 随机采样
+            limitedTexts = this.shuffleArray([...texts]).slice(0, this.config.maxDataSize);
+            Utils.log(`数据采样: ${texts.length} → ${limitedTexts.length} 条`);
+        }
 
         const xs = [];
         const ys = [];
         const seqLen = this.config.seqLength;
         let skippedCount = 0;
 
-        for (const text of texts) {
+        for (const text of limitedTexts) {
             const encoded = this.tokenizer.encode(text);
             
-            // 跳过太短的序列（至少需要2个token才能做预测）
             if (encoded.length < 2) {
                 skippedCount++;
                 continue;
             }
 
-            // 【关键修复】确保序列长度为 seqLen + 1，这样 slice 后才能得到 seqLen 长度
-            // 因为 xs = seq[:-1], ys = seq[1:]，两者都需要长度为 seqLen
-            
+            // 填充/截断到 seqLen + 1
             let seq;
             if (encoded.length > seqLen + 1) {
-                // 截断：保留前 seqLen + 1 个token
                 seq = encoded.slice(0, seqLen + 1);
             } else if (encoded.length < seqLen + 1) {
-                // 填充：用0填充到 seqLen + 1
                 seq = [...encoded];
                 while (seq.length < seqLen + 1) {
-                    seq.push(0); // PAD token
+                    seq.push(0);
                 }
             } else {
-                // 长度刚好
                 seq = encoded;
             }
 
-            // 现在 seq 长度为 seqLen + 1
-            // xs = seq[:-1] 长度为 seqLen
-            // ys = seq[1:] 长度为 seqLen
-            const inputSeq = seq.slice(0, seqLen);      // 长度 = seqLen
-            const targetSeq = seq.slice(1, seqLen + 1);  // 长度 = seqLen
-
-            // 验证长度
-            if (inputSeq.length !== seqLen || targetSeq.length !== seqLen) {
-                console.error(`长度错误: input=${inputSeq.length}, target=${targetSeq.length}, expected=${seqLen}`);
-                continue;
-            }
+            const inputSeq = seq.slice(0, seqLen);
+            const targetSeq = seq.slice(1, seqLen + 1);
 
             xs.push(inputSeq);
-            // ys 需要是3D: [batch, seqLen, 1]
             ys.push(targetSeq.map(v => [v]));
         }
 
@@ -143,19 +183,22 @@ class TianguangTrainer {
             Utils.log(`跳过过短样本: ${skippedCount}`);
         }
 
-        // 最终验证
-        if (xs.length > 0) {
-            Utils.log(`输入形状: [${xs.length}, ${xs[0].length}]`);
-            Utils.log(`目标形状: [${ys.length}, ${ys[0].length}, ${ys[0][0].length}]`);
-        }
-
         return {
             xs: tf.tensor2d(xs),
             ys: tf.tensor3d(ys)
         };
     }
 
-    // 训练
+    // 数组随机打乱
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    // 训练（优化版）
     async train(texts, callbacks = {}) {
         if (this.isTraining) {
             Utils.log('训练已在进行中', 'warning');
@@ -163,26 +206,21 @@ class TianguangTrainer {
         }
 
         this.isTraining = true;
+        this.shouldStop = false;
         this.trainingData = texts;
         this.history = [];
 
         const startTime = Date.now();
 
         try {
-            // 初始化
             await this.init();
-
-            // 创建分词器
             this.createTokenizer(texts);
-
-            // 创建模型
             await this.createModel();
             
-            // 准备数据
             const { xs, ys } = this.prepareData(texts);
 
-            // 训练
             Utils.log('开始训练...');
+            Utils.log(`预计时间: ${this.estimateTime(xs.shape[0])}`);
 
             await this.model.fit(xs, ys, {
                 epochs: this.config.epochs,
@@ -191,7 +229,14 @@ class TianguangTrainer {
                 shuffle: true,
                 callbacks: {
                     onEpochEnd: (epoch, logs) => {
+                        if (this.shouldStop) {
+                            this.model.stopTraining = true;
+                            return;
+                        }
+
                         const progress = ((epoch + 1) / this.config.epochs) * 100;
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        const eta = (elapsed / (epoch + 1)) * (this.config.epochs - epoch - 1);
 
                         this.history.push({
                             epoch: epoch + 1,
@@ -205,12 +250,15 @@ class TianguangTrainer {
                                 total: this.config.epochs,
                                 progress,
                                 loss: logs.loss,
-                                accuracy: logs.acc
+                                accuracy: logs.acc,
+                                elapsed,
+                                eta
                             });
                         }
 
-                        if ((epoch + 1) % 10 === 0 || epoch === 0) {
-                            Utils.log(`Epoch ${epoch + 1}/${this.config.epochs} - Loss: ${logs.loss.toFixed(4)} - Acc: ${(logs.acc * 100).toFixed(1)}%`);
+                        // 每5轮输出一次
+                        if ((epoch + 1) % 5 === 0 || epoch === 0) {
+                            Utils.log(`Epoch ${epoch + 1}/${this.config.epochs} - Loss: ${logs.loss.toFixed(4)} - Acc: ${(logs.acc * 100).toFixed(1)}% - ETA: ${Utils.formatTime(eta)}`);
                         }
                     },
                     onTrainEnd: () => {
@@ -224,7 +272,6 @@ class TianguangTrainer {
                 }
             });
 
-            // 清理
             xs.dispose();
             ys.dispose();
 
@@ -239,10 +286,17 @@ class TianguangTrainer {
         }
     }
 
+    // 估算训练时间
+    estimateTime(sampleCount) {
+        const timePerSample = 0.001; // 每个样本每轮约1ms
+        const totalTime = sampleCount * this.config.epochs * timePerSample / this.config.batchSize;
+        return Utils.formatTime(totalTime);
+    }
+
     // 停止训练
     stop() {
-        this.isTraining = false;
-        Utils.log('训练已停止', 'warning');
+        this.shouldStop = true;
+        Utils.log('正在停止训练...', 'warning');
     }
 
     // 生成文本
@@ -251,11 +305,8 @@ class TianguangTrainer {
             return '请先训练模型';
         }
 
-        Utils.log(`生成: ${prompt}`);
-
         let tokens = this.tokenizer.encode(prompt);
 
-        // 确保不超过序列长度
         if (tokens.length > this.config.seqLength - 1) {
             tokens = tokens.slice(-this.config.seqLength + 1);
         }
@@ -263,93 +314,58 @@ class TianguangTrainer {
         const generated = [];
 
         for (let i = 0; i < maxLength; i++) {
-            // 【修复】填充到固定长度 seqLen
             const input = [...tokens];
             while (input.length < this.config.seqLength) {
-                input.push(0); // 在末尾填充
+                input.push(0);
             }
             
-            // 截断到 seqLen
             const inputSeq = input.slice(0, this.config.seqLength);
             
             const inputTensor = tf.tensor2d([inputSeq]);
             const output = this.model.predict(inputTensor);
 
-            // 获取最后一个有效位置的预测
             const lastPos = Math.min(tokens.length, this.config.seqLength) - 1;
             const probs = output.slice([0, lastPos, 0], [1, 1, this.config.vocabSize]);
 
-            // 采样
             const nextToken = (await tf.multinomial(probs.flatten(), 1).data())[0];
 
             tokens.push(nextToken);
             generated.push(nextToken);
 
-            // 清理
             inputTensor.dispose();
             output.dispose();
             probs.dispose();
 
-            // 遇到结束符停止
             if (nextToken === 3) break;
         }
 
-        const result = this.tokenizer.decode(generated);
-        Utils.log(`结果: ${result}`, 'success');
-
-        return result;
+        return this.tokenizer.decode(generated);
     }
 
-    // 评估
-    evaluate(text) {
-        // 简单评估指标
-        const words = text.split(/\s+/).filter(w => w.length > 0);
-        const uniqueWords = new Set(words);
-
-        return {
-            fluency: Math.min(100, 50 + Math.random() * 50), // 模拟评分
-            relevance: Math.min(100, 40 + Math.random() * 60),
-            diversity: Math.min(100, (uniqueWords.size / Math.max(words.length, 1)) * 100)
-        };
-    }
-
-    // 保存模型
+    // 保存/加载
     async save() {
-        if (!this.model) {
-            Utils.log('没有模型可保存', 'warning');
-            return null;
-        }
-
-        const data = {
+        if (!this.model) return null;
+        return {
             config: this.config,
             tokenizer: this.tokenizer.save(),
             history: this.history,
             timestamp: Date.now()
         };
-
-        Utils.log('模型已保存', 'success');
-        return data;
     }
 
-    // 加载模型
     async load(data) {
         try {
             this.config = data.config;
             this.tokenizer = new SimpleTokenizer();
             this.tokenizer.load(data.tokenizer);
             this.history = data.history || [];
-
             await this.createModel();
-
-            Utils.log('模型已加载', 'success');
             return true;
         } catch (error) {
-            Utils.log(`加载失败: ${error.message}`, 'error');
             return false;
         }
     }
 
-    // 获取状态
     getStatus() {
         return {
             isTraining: this.isTraining,
@@ -370,7 +386,6 @@ class SimpleTokenizer {
 
     train(texts, vocabSize) {
         const charFreq = {};
-
         for (const text of texts) {
             for (const char of text) {
                 charFreq[char] = (charFreq[char] || 0) + 1;
@@ -414,5 +429,4 @@ class SimpleTokenizer {
     }
 }
 
-// 导出
 window.TianguangTrainer = TianguangTrainer;

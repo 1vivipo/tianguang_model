@@ -1,453 +1,365 @@
 /**
- * 天光AI - 主应用
+ * 天光AI - 应用主模块
  */
 
-// 全局变量
-let trainer = null;
-let trainingData = [];
-let trainStartTime = 0;
+class TianguangApp {
+    constructor() {
+        this.trainer = new TianguangTrainer();
+        this.styleGenerator = null;
+        this.currentStyle = 'feilu';
+        this.loadedDataCount = 0;
+    }
 
-// 初始化
-document.addEventListener('DOMContentLoaded', async () => {
-    // 创建训练器
-    trainer = new TianguangTrainer();
-
-    // 加载保存的数据
-    loadSavedData();
+    // 初始化
+    async init() {
+        console.log('天光AI 初始化...');
+        
+        // 绑定事件
+        this.bindEvents();
+        
+        // 加载数据统计
+        this.loadDataStats();
+        
+        // 初始化风格生成器
+        this.styleGenerator = new StyleGenerator(this.trainer);
+        
+        console.log('初始化完成');
+    }
 
     // 绑定事件
-    bindEvents();
-
-    // 初始化UI
-    updateUI();
-
-    Utils.log('系统就绪');
-    Utils.log(`后端: ${tf.getBackend()}`);
-    Utils.log('内置120条训练数据，点击"加载全部数据"开始');
-});
-
-// 绑定事件
-function bindEvents() {
-    // 菜单切换
-    document.getElementById('menuToggle').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('open');
-    });
-
-    // 页面切换
-    document.querySelectorAll('.menu-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = item.dataset.page;
-            switchPage(page);
+    bindEvents() {
+        // 导航
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = item.dataset.page;
+                this.showPage(page);
+            });
         });
-    });
 
-    // 训练控制
-    document.getElementById('startTrainBtn').addEventListener('click', startTraining);
-    document.getElementById('stopTrainBtn').addEventListener('click', stopTraining);
-    document.getElementById('saveModelBtn').addEventListener('click', saveModel);
-
-    // 内置数据加载
-    document.getElementById('loadAllDataBtn').addEventListener('click', loadAllData);
-    document.getElementById('loadRandomBtn').addEventListener('click', loadRandomData);
-    
-    // 分类数据加载
-    document.querySelectorAll('.category-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const category = btn.dataset.category;
-            loadCategoryData(category);
-        });
-    });
-
-    // 数据管理
-    document.getElementById('saveDataBtn').addEventListener('click', saveData);
-    document.getElementById('uploadFileBtn').addEventListener('click', () => {
-        document.getElementById('fileInput').click();
-    });
-    document.getElementById('fileInput').addEventListener('change', handleFileUpload);
-    document.getElementById('clearDataBtn').addEventListener('click', clearData);
-
-    // 测试
-    document.getElementById('testBtn').addEventListener('click', runTest);
-    document.getElementById('addCorrectionBtn').addEventListener('click', addCorrection);
-
-    // 聊天
-    document.getElementById('sendChatBtn').addEventListener('click', sendChat);
-    document.getElementById('chatInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendChat();
-    });
-
-    // 设置
-    document.getElementById('exportModelBtn').addEventListener('click', exportModel);
-    document.getElementById('importModelBtn').addEventListener('click', () => {
-        document.getElementById('modelInput').click();
-    });
-    document.getElementById('modelInput').addEventListener('change', importModel);
-
-    // 参数变化
-    ['epochs', 'learningRate', 'batchSize', 'seqLength', 'embedDim'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('change', updateConfig);
+        // 移动端菜单
+        const menuToggle = document.getElementById('menuToggle');
+        if (menuToggle) {
+            menuToggle.addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('open');
+            });
         }
-    });
-}
 
-// 切换页面
-function switchPage(page) {
-    document.querySelectorAll('.menu-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.page === page);
-    });
+        // 训练控制
+        document.getElementById('startTrainBtn')?.addEventListener('click', () => this.startTraining());
+        document.getElementById('stopTrainBtn')?.addEventListener('click', () => this.stopTraining());
+        document.getElementById('saveModelBtn')?.addEventListener('click', () => this.saveModel());
 
-    document.querySelectorAll('.page').forEach(p => {
-        p.classList.toggle('active', p.id === `page-${page}`);
-    });
+        // 数据管理
+        document.getElementById('loadAllDataBtn')?.addEventListener('click', () => this.loadAllData());
+        document.getElementById('loadRandomBtn')?.addEventListener('click', () => this.loadRandomData(500));
 
-    const titles = {
-        train: '模型训练',
-        data: '数据管理',
-        test: '测试评估',
-        chat: '对话测试',
-        settings: '系统设置'
-    };
-    document.getElementById('pageTitle').textContent = titles[page] || page;
-    document.getElementById('sidebar').classList.remove('open');
-}
+        // 测试
+        document.getElementById('testBtn')?.addEventListener('click', () => this.runTest());
 
-// 更新配置
-function updateConfig() {
-    if (!trainer) return;
-    trainer.config.epochs = parseInt(document.getElementById('epochs').value) || 50;
-    trainer.config.learningRate = parseFloat(document.getElementById('learningRate').value) || 0.01;
-    trainer.config.batchSize = parseInt(document.getElementById('batchSize').value) || 8;
-    trainer.config.seqLength = parseInt(document.getElementById('seqLength').value) || 32;
-    trainer.config.embedDim = parseInt(document.getElementById('embedDim').value) || 64;
-}
+        // 聊天
+        document.getElementById('sendChatBtn')?.addEventListener('click', () => this.sendChat());
+        document.getElementById('chatInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.sendChat();
+        });
 
-// 加载全部内置数据
-function loadAllData() {
-    if (!window.TrainingData) {
-        Utils.notify('数据文件加载失败', 'error');
-        return;
-    }
-    
-    trainingData = TrainingData.getAllData();
-    updateDataUI();
-    Utils.notify(`已加载 ${trainingData.length} 条数据`, 'success');
-    Utils.log(`加载全部数据: ${trainingData.length} 条`);
-}
-
-// 加载随机数据
-function loadRandomData() {
-    if (!window.TrainingData) {
-        Utils.notify('数据文件加载失败', 'error');
-        return;
-    }
-    
-    trainingData = TrainingData.getRandomData(50);
-    updateDataUI();
-    Utils.notify(`已随机加载 ${trainingData.length} 条数据`, 'success');
-    Utils.log(`随机加载数据: ${trainingData.length} 条`);
-}
-
-// 加载分类数据
-function loadCategoryData(category) {
-    if (!window.TrainingData) {
-        Utils.notify('数据文件加载失败', 'error');
-        return;
-    }
-    
-    const data = TrainingData.getCategoryData(category);
-    trainingData = [...trainingData, ...data];
-    updateDataUI();
-    Utils.notify(`已添加 ${data.length} 条${category}数据`, 'success');
-    Utils.log(`添加${category}数据: ${data.length} 条`);
-}
-
-// 更新数据UI
-function updateDataUI() {
-    document.getElementById('dataInput').value = trainingData.join('\n');
-    Utils.storage.set('trainingData', trainingData);
-    updateDataPreview();
-}
-
-// 开始训练
-async function startTraining() {
-    if (trainingData.length < 2) {
-        Utils.notify('请先加载训练数据', 'error');
-        switchPage('data');
-        return;
+        // 导出导入
+        document.getElementById('exportModelBtn')?.addEventListener('click', () => this.exportModel());
+        document.getElementById('importModelBtn')?.addEventListener('click', () => document.getElementById('modelInput').click());
+        document.getElementById('modelInput')?.addEventListener('change', (e) => this.importModel(e));
     }
 
-    updateConfig();
+    // 显示页面
+    showPage(pageName) {
+        // 更新菜单
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.page === pageName);
+        });
 
-    // 更新UI
-    document.getElementById('startTrainBtn').disabled = true;
-    document.getElementById('stopTrainBtn').disabled = false;
-    document.getElementById('statusBadge').textContent = '训练中';
-    document.getElementById('statusBadge').classList.add('training');
-    document.getElementById('trainStatus').textContent = '初始化...';
-    trainStartTime = Date.now();
+        // 更新页面
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.toggle('active', page.id === `page-${pageName}`);
+        });
 
-    Utils.clearLog();
-    Utils.log('开始训练...');
-    Utils.log(`数据量: ${trainingData.length} 条`);
-    Utils.log(`参数: epochs=${trainer.config.epochs}, lr=${trainer.config.learningRate}, batch=${trainer.config.batchSize}`);
+        // 更新标题
+        const titles = {
+            train: '模型训练',
+            data: '数据管理',
+            test: '测试评估',
+            chat: '对话测试',
+            settings: '系统设置'
+        };
+        document.getElementById('pageTitle').textContent = titles[pageName] || pageName;
+    }
+
+    // 加载数据统计
+    loadDataStats() {
+        if (typeof TrainingData !== 'undefined') {
+            const stats = TrainingData.getStats();
+            document.getElementById('totalData').textContent = stats.total;
+        }
+    }
+
+    // 加载全部数据
+    loadAllData() {
+        if (typeof TrainingData === 'undefined') {
+            this.showNotification('数据模块未加载', 'error');
+            return;
+        }
+
+        const allData = TrainingData.getAllData();
+        this.loadedDataCount = allData.length;
+        
+        // 显示预览
+        const preview = document.getElementById('dataPreview');
+        if (preview) {
+            preview.innerHTML = allData.slice(0, 20).map(d => 
+                `<div class="data-item">${d.substring(0, 50)}...</div>`
+            ).join('');
+        }
+
+        // 更新统计
+        document.getElementById('loadedData').textContent = allData.length;
+        
+        // 更新分类统计
+        const categories = TrainingData.getCategories();
+        const categoriesDiv = document.getElementById('dataCategories');
+        if (categoriesDiv) {
+            categoriesDiv.innerHTML = Object.entries(categories).map(([name, count]) => 
+                `<div class="category-item">
+                    <span class="category-name">${name}</span>
+                    <span class="category-count">${count}</span>
+                </div>`
+            ).join('');
+        }
+
+        this.showNotification(`已加载 ${allData.length} 条数据`);
+    }
+
+    // 加载随机数据
+    loadRandomData(count) {
+        if (typeof TrainingData === 'undefined') {
+            this.showNotification('数据模块未加载', 'error');
+            return;
+        }
+
+        const allData = TrainingData.getAllData();
+        const shuffled = [...allData].sort(() => Math.random() - 0.5);
+        const selected = shuffled.slice(0, count);
+        
+        this.loadedDataCount = selected.length;
+        
+        const preview = document.getElementById('dataPreview');
+        if (preview) {
+            preview.innerHTML = selected.slice(0, 20).map(d => 
+                `<div class="data-item">${d.substring(0, 50)}...</div>`
+            ).join('');
+        }
+
+        document.getElementById('loadedData').textContent = selected.length;
+        this.showNotification(`已随机加载 ${selected.length} 条数据`);
+    }
 
     // 开始训练
-    await trainer.train(trainingData, {
-        onProgress: (data) => {
-            document.getElementById('currentEpoch').textContent = `${data.epoch} / ${trainer.config.epochs}`;
-            document.getElementById('currentLoss').textContent = data.loss.toFixed(4);
-            document.getElementById('currentAccuracy').textContent = (data.accuracy * 100).toFixed(1) + '%';
-            document.getElementById('trainProgress').style.width = data.progress + '%';
-            document.getElementById('progressText').textContent = data.progress.toFixed(1) + '%';
-            document.getElementById('trainStatus').textContent = '训练中...';
-            
-            // 更新用时
-            const elapsed = Math.floor((Date.now() - trainStartTime) / 1000);
-            document.getElementById('elapsedTime').textContent = Utils.formatTime(elapsed);
-        },
-        onComplete: () => {
-            document.getElementById('startTrainBtn').disabled = false;
-            document.getElementById('stopTrainBtn').disabled = true;
-            document.getElementById('saveModelBtn').disabled = false;
-            document.getElementById('statusBadge').textContent = '完成';
-            document.getElementById('statusBadge').classList.remove('training');
-            document.getElementById('trainStatus').textContent = '训练完成';
-            Utils.notify('训练完成!', 'success');
-        },
-        onError: (error) => {
-            document.getElementById('startTrainBtn').disabled = false;
-            document.getElementById('stopTrainBtn').disabled = true;
-            document.getElementById('statusBadge').textContent = '错误';
-            document.getElementById('statusBadge').classList.remove('training');
-            document.getElementById('trainStatus').textContent = '训练失败';
-            Utils.notify('训练失败: ' + error.message, 'error');
+    async startTraining() {
+        // 获取数据
+        let data = [];
+        if (typeof TrainingData !== 'undefined') {
+            data = TrainingData.getAllData();
         }
-    });
-}
-
-// 停止训练
-function stopTraining() {
-    trainer.stop();
-    document.getElementById('startTrainBtn').disabled = false;
-    document.getElementById('stopTrainBtn').disabled = true;
-    document.getElementById('statusBadge').textContent = '已停止';
-    document.getElementById('statusBadge').classList.remove('training');
-    document.getElementById('trainStatus').textContent = '已停止';
-}
-
-// 保存模型
-async function saveModel() {
-    const data = await trainer.save();
-    if (data) {
-        Utils.storage.set('model', data);
-        Utils.notify('模型已保存到本地', 'success');
-    }
-}
-
-// 保存数据
-function saveData() {
-    const input = document.getElementById('dataInput').value;
-    const lines = input.split('\n').filter(l => l.trim());
-
-    if (lines.length === 0) {
-        Utils.notify('请输入训练数据', 'error');
-        return;
-    }
-
-    trainingData = lines;
-    Utils.storage.set('trainingData', trainingData);
-    updateDataPreview();
-    Utils.notify(`已保存 ${lines.length} 条数据`, 'success');
-}
-
-// 加载保存的数据
-function loadSavedData() {
-    const saved = Utils.storage.get('trainingData');
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-        trainingData = saved;
-        document.getElementById('dataInput').value = trainingData.join('\n');
-        updateDataPreview();
-    }
-}
-
-// 更新数据预览
-function updateDataPreview() {
-    const preview = document.getElementById('dataPreview');
-    const count = document.getElementById('dataCount');
-
-    if (trainingData.length === 0) {
-        preview.innerHTML = '<p class="empty-hint">点击上方按钮加载内置数据，或添加自定义数据</p>';
-        count.textContent = '0';
-        document.getElementById('vocabSize').textContent = '0';
-        return;
-    }
-
-    preview.innerHTML = trainingData.slice(0, 20).map((item, i) => 
-        `<div class="data-item">${i + 1}. ${item.slice(0, 50)}${item.length > 50 ? '...' : ''}</div>`
-    ).join('') + (trainingData.length > 20 ? `<p class="hint">...还有 ${trainingData.length - 20} 条数据</p>` : '');
-
-    count.textContent = trainingData.length;
-    document.getElementById('vocabSize').textContent = '~' + Math.min(500, trainingData.length * 10);
-}
-
-// 处理文件上传
-async function handleFileUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-        const content = await Utils.readFile(file);
-        let lines = [];
-
-        if (file.name.endsWith('.json')) {
-            const data = JSON.parse(content);
-            if (Array.isArray(data)) {
-                lines = data.map(d => typeof d === 'string' ? d : d.text || d.content || '');
-            }
-        } else {
-            lines = content.split('\n').filter(l => l.trim());
+        
+        // 也加上用户自定义数据
+        const customData = document.getElementById('dataInput')?.value || '';
+        if (customData.trim()) {
+            data = data.concat(customData.split('\n').filter(l => l.trim()));
         }
 
-        trainingData = [...trainingData, ...lines.filter(l => l.trim())];
-        document.getElementById('dataInput').value = trainingData.join('\n');
-        Utils.storage.set('trainingData', trainingData);
-        updateDataPreview();
-        Utils.notify(`已导入 ${lines.length} 条数据`, 'success');
-    } catch (error) {
-        Utils.notify('文件读取失败', 'error');
+        if (data.length === 0) {
+            this.showNotification('请先加载数据', 'error');
+            return;
+        }
+
+        // 获取训练模式
+        const mode = document.querySelector('input[name="trainMode"]:checked')?.value || 'quick';
+        this.trainer.setMode(mode);
+
+        // 获取参数
+        const epochs = parseInt(document.getElementById('epochs')?.value) || 20;
+        const learningRate = parseFloat(document.getElementById('learningRate')?.value) || 0.02;
+        const batchSize = parseInt(document.getElementById('batchSize')?.value) || 8;
+
+        this.trainer.config.epochs = epochs;
+        this.trainer.config.learningRate = learningRate;
+        this.trainer.config.batchSize = batchSize;
+
+        // 更新UI
+        document.getElementById('startTrainBtn').disabled = true;
+        document.getElementById('stopTrainBtn').disabled = false;
+        document.getElementById('trainStatus').textContent = '训练中...';
+        document.getElementById('trainLog').innerHTML = '';
+
+        // 开始训练
+        try {
+            await this.trainer.train(data, {
+                onProgress: (info) => {
+                    document.getElementById('currentEpoch').textContent = `${info.epoch}/${info.total}`;
+                    document.getElementById('currentLoss').textContent = info.loss.toFixed(4);
+                    document.getElementById('currentAccuracy').textContent = `${(info.accuracy * 100).toFixed(1)}%`;
+                    document.getElementById('trainProgress').style.width = `${info.progress}%`;
+                    document.getElementById('progressText').textContent = `${info.progress.toFixed(1)}%`;
+                    document.getElementById('elapsedTime').textContent = Utils.formatTime(info.elapsed);
+                    
+                    if (info.eta) {
+                        document.getElementById('trainLog').innerHTML += 
+                            `<div>Epoch ${info.epoch}: Loss=${info.loss.toFixed(4)}, ETA=${Utils.formatTime(info.eta)}</div>`;
+                    }
+                },
+                onComplete: (history) => {
+                    document.getElementById('trainStatus').textContent = '训练完成';
+                    document.getElementById('startTrainBtn').disabled = false;
+                    document.getElementById('stopTrainBtn').disabled = true;
+                    document.getElementById('saveModelBtn').disabled = false;
+                    this.showNotification('训练完成！', 'success');
+                },
+                onError: (error) => {
+                    document.getElementById('trainStatus').textContent = '训练失败';
+                    document.getElementById('startTrainBtn').disabled = false;
+                    document.getElementById('stopTrainBtn').disabled = true;
+                    this.showNotification(`训练失败: ${error.message}`, 'error');
+                }
+            });
+        } catch (error) {
+            console.error(error);
+            this.showNotification(`训练出错: ${error.message}`, 'error');
+        }
     }
 
-    e.target.value = '';
-}
-
-// 清空数据
-function clearData() {
-    if (confirm('确定要清空所有数据吗？')) {
-        trainingData = [];
-        document.getElementById('dataInput').value = '';
-        Utils.storage.remove('trainingData');
-        updateDataPreview();
-        Utils.notify('数据已清空', 'success');
-    }
-}
-
-// 运行测试
-async function runTest() {
-    const prompt = document.getElementById('testPrompt').value || '人工智能';
-    const length = parseInt(document.getElementById('generateLength').value) || 30;
-    const temperature = parseFloat(document.getElementById('temperature').value) || 0.8;
-
-    document.getElementById('testResult').innerHTML = '<p>生成中...</p>';
-
-    try {
-        const result = await trainer.generate(prompt, length, temperature);
-        document.getElementById('testResult').textContent = result;
-
-        const scores = trainer.evaluate(result);
-        updateScores(scores);
-    } catch (error) {
-        document.getElementById('testResult').textContent = '生成失败: ' + error.message;
-    }
-}
-
-// 更新评分
-function updateScores(scores) {
-    document.getElementById('fluencyScore').style.width = scores.fluency + '%';
-    document.getElementById('fluencyValue').textContent = scores.fluency.toFixed(0);
-
-    document.getElementById('relevanceScore').style.width = scores.relevance + '%';
-    document.getElementById('relevanceValue').textContent = scores.relevance.toFixed(0);
-
-    document.getElementById('diversityScore').style.width = scores.diversity + '%';
-    document.getElementById('diversityValue').textContent = scores.diversity.toFixed(0);
-}
-
-// 添加纠正
-function addCorrection() {
-    const correction = document.getElementById('correctionInput').value.trim();
-    if (!correction) {
-        Utils.notify('请输入纠正内容', 'error');
-        return;
+    // 停止训练
+    stopTraining() {
+        this.trainer.stop();
+        document.getElementById('trainStatus').textContent = '已停止';
+        document.getElementById('startTrainBtn').disabled = false;
+        document.getElementById('stopTrainBtn').disabled = true;
     }
 
-    trainingData.push(correction);
-    document.getElementById('dataInput').value = trainingData.join('\n');
-    Utils.storage.set('trainingData', trainingData);
-    updateDataPreview();
-    document.getElementById('correctionInput').value = '';
-    Utils.notify('已添加到训练数据', 'success');
-}
+    // 保存模型
+    async saveModel() {
+        const data = await this.trainer.save();
+        if (!data) {
+            this.showNotification('没有模型可保存', 'error');
+            return;
+        }
 
-// 发送聊天
-async function sendChat() {
-    const input = document.getElementById('chatInput');
-    const message = input.value.trim();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tianguang-model-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
 
-    if (!message) return;
-
-    addChatMessage(message, 'user');
-    input.value = '';
-
-    try {
-        const response = await trainer.generate(message, 30);
-        addChatMessage(response, 'assistant');
-    } catch (error) {
-        addChatMessage('生成失败，请确保已训练模型', 'system');
-    }
-}
-
-// 添加聊天消息
-function addChatMessage(content, role) {
-    const container = document.getElementById('chatContainer');
-    const msg = document.createElement('div');
-    msg.className = `chat-message ${role}`;
-    msg.innerHTML = `<div class="message-content">${content}</div>`;
-    container.appendChild(msg);
-    container.scrollTop = container.scrollHeight;
-}
-
-// 导出模型
-async function exportModel() {
-    const data = await trainer.save();
-    if (data) {
-        Utils.downloadJSON(data, `tianguang-model-${Date.now()}.json`);
-        Utils.notify('模型已导出', 'success');
-    }
-}
-
-// 导入模型
-async function importModel(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-        const content = await Utils.readFile(file);
-        const data = JSON.parse(content);
-        await trainer.load(data);
-        Utils.notify('模型已导入', 'success');
-        updateUI();
-    } catch (error) {
-        Utils.notify('导入失败', 'error');
+        this.showNotification('模型已保存', 'success');
     }
 
-    e.target.value = '';
-}
+    // 运行测试
+    async runTest() {
+        const prompt = document.getElementById('testPrompt')?.value || '人工智能';
+        const length = parseInt(document.getElementById('generateLength')?.value) || 50;
+        const temperature = parseFloat(document.getElementById('temperature')?.value) || 0.8;
 
-// 更新UI
-function updateUI() {
-    const status = trainer.getStatus();
+        const resultDiv = document.getElementById('testResult');
+        resultDiv.innerHTML = '<p>生成中...</p>';
 
-    document.getElementById('dataCount').textContent = trainingData.length;
-    
-    if (status.hasModel) {
-        document.getElementById('saveModelBtn').disabled = false;
-        document.getElementById('modelInfo').innerHTML = `
-            <p><strong>模型状态:</strong> 已加载</p>
-            <p><strong>参数量:</strong> ${Utils.formatNumber(trainer.model?.countParams() || 0)}</p>
-            <p><strong>训练轮次:</strong> ${status.historyLength}</p>
+        try {
+            const result = await this.trainer.generate(prompt, length, temperature);
+            resultDiv.innerHTML = `<div class="generated-text">${prompt}${result}</div>`;
+        } catch (error) {
+            resultDiv.innerHTML = `<p class="error">生成失败: ${error.message}</p>`;
+        }
+    }
+
+    // 发送聊天
+    async sendChat() {
+        const input = document.getElementById('chatInput');
+        const message = input?.value.trim();
+        
+        if (!message) return;
+
+        const container = document.getElementById('chatContainer');
+        
+        // 添加用户消息
+        container.innerHTML += `
+            <div class="chat-message user">
+                <div class="message-content">${message}</div>
+            </div>
         `;
+
+        input.value = '';
+
+        // 生成回复
+        try {
+            const response = await this.styleGenerator.generate(message, 100);
+            
+            container.innerHTML += `
+                <div class="chat-message assistant">
+                    <div class="message-content">${response}</div>
+                </div>
+            `;
+        } catch (error) {
+            container.innerHTML += `
+                <div class="chat-message assistant">
+                    <div class="message-content">抱歉，生成回复时出错了。</div>
+                </div>
+            `;
+        }
+
+        // 滚动到底部
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // 导出模型
+    async exportModel() {
+        await this.saveModel();
+    }
+
+    // 导入模型
+    async importModel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                await this.trainer.load(data);
+                this.showNotification('模型已加载', 'success');
+                document.getElementById('modelInfo').innerHTML = `
+                    <p>模型已加载</p>
+                    <p>词表大小: ${data.config.vocabSize}</p>
+                    <p>训练轮次: ${data.history?.length || 0}</p>
+                `;
+            } catch (error) {
+                this.showNotification('加载失败', 'error');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // 显示通知
+    showNotification(message, type = 'info') {
+        const notification = document.getElementById('notification');
+        if (notification) {
+            notification.textContent = message;
+            notification.className = `notification show ${type}`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
     }
 }
+
+// 初始化
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new TianguangApp();
+    window.app.init();
+});
