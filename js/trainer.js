@@ -84,29 +84,71 @@ class TianguangTrainer {
         return model;
     }
 
-    // 准备数据
+    // 准备数据 - 修复版本：确保每条样本长度严格等于seqLength
     prepareData(texts) {
         Utils.log('准备训练数据...');
+        Utils.log(`目标序列长度: ${this.config.seqLength}`);
 
         const xs = [];
         const ys = [];
+        const seqLen = this.config.seqLength;
+        let skippedCount = 0;
 
         for (const text of texts) {
             const encoded = this.tokenizer.encode(text);
-            if (encoded.length >= 2) {
-                // 截断或填充
-                let seq = encoded.slice(0, this.config.seqLength);
-                while (seq.length < this.config.seqLength) {
-                    seq.push(0);
-                }
-
-                // 输入和目标
-                xs.push(seq.slice(0, -1));
-                ys.push(seq.slice(1).map(v => [v]));
+            
+            // 跳过太短的序列（至少需要2个token才能做预测）
+            if (encoded.length < 2) {
+                skippedCount++;
+                continue;
             }
+
+            // 【关键修复】确保序列长度为 seqLen + 1，这样 slice 后才能得到 seqLen 长度
+            // 因为 xs = seq[:-1], ys = seq[1:]，两者都需要长度为 seqLen
+            
+            let seq;
+            if (encoded.length > seqLen + 1) {
+                // 截断：保留前 seqLen + 1 个token
+                seq = encoded.slice(0, seqLen + 1);
+            } else if (encoded.length < seqLen + 1) {
+                // 填充：用0填充到 seqLen + 1
+                seq = [...encoded];
+                while (seq.length < seqLen + 1) {
+                    seq.push(0); // PAD token
+                }
+            } else {
+                // 长度刚好
+                seq = encoded;
+            }
+
+            // 现在 seq 长度为 seqLen + 1
+            // xs = seq[:-1] 长度为 seqLen
+            // ys = seq[1:] 长度为 seqLen
+            const inputSeq = seq.slice(0, seqLen);      // 长度 = seqLen
+            const targetSeq = seq.slice(1, seqLen + 1);  // 长度 = seqLen
+
+            // 验证长度
+            if (inputSeq.length !== seqLen || targetSeq.length !== seqLen) {
+                console.error(`长度错误: input=${inputSeq.length}, target=${targetSeq.length}, expected=${seqLen}`);
+                continue;
+            }
+
+            xs.push(inputSeq);
+            // ys 需要是3D: [batch, seqLen, 1]
+            ys.push(targetSeq.map(v => [v]));
         }
 
         Utils.log(`训练样本数: ${xs.length}`);
+        if (skippedCount > 0) {
+            Utils.log(`跳过过短样本: ${skippedCount}`);
+        }
+
+        // 最终验证
+        if (xs.length > 0) {
+            Utils.log(`输入形状: [${xs.length}, ${xs[0].length}]`);
+            Utils.log(`目标形状: [${ys.length}, ${ys[0].length}, ${ys[0][0].length}]`);
+        }
+
         return {
             xs: tf.tensor2d(xs),
             ys: tf.tensor3d(ys)
@@ -135,7 +177,7 @@ class TianguangTrainer {
 
             // 创建模型
             await this.createModel();
-
+            
             // 准备数据
             const { xs, ys } = this.prepareData(texts);
 
@@ -188,6 +230,7 @@ class TianguangTrainer {
 
         } catch (error) {
             Utils.log(`训练错误: ${error.message}`, 'error');
+            console.error(error);
             if (callbacks.onError) {
                 callbacks.onError(error);
             }
@@ -220,17 +263,20 @@ class TianguangTrainer {
         const generated = [];
 
         for (let i = 0; i < maxLength; i++) {
-            // 填充到固定长度
+            // 【修复】填充到固定长度 seqLen
             const input = [...tokens];
-            while (input.length < this.config.seqLength - 1) {
-                input.unshift(0);
+            while (input.length < this.config.seqLength) {
+                input.push(0); // 在末尾填充
             }
-
-            const inputTensor = tf.tensor2d([input.slice(0, this.config.seqLength - 1)]);
+            
+            // 截断到 seqLen
+            const inputSeq = input.slice(0, this.config.seqLength);
+            
+            const inputTensor = tf.tensor2d([inputSeq]);
             const output = this.model.predict(inputTensor);
 
-            // 获取最后一个位置的预测
-            const lastPos = Math.min(tokens.length, this.config.seqLength - 1) - 1;
+            // 获取最后一个有效位置的预测
+            const lastPos = Math.min(tokens.length, this.config.seqLength) - 1;
             const probs = output.slice([0, lastPos, 0], [1, 1, this.config.vocabSize]);
 
             // 采样
@@ -334,7 +380,7 @@ class SimpleTokenizer {
         const sorted = Object.entries(charFreq).sort((a, b) => b[1] - a[1]);
 
         for (let i = 0; i < Math.min(sorted.length, vocabSize - 4); i++) {
-            const idx = this.char2idx.size;
+            const idx = Object.keys(this.char2idx).length;
             this.char2idx[sorted[i][0]] = idx;
             this.idx2char[idx] = sorted[i][0];
         }
@@ -352,7 +398,7 @@ class SimpleTokenizer {
     }
 
     size() {
-        return this.char2idx.size;
+        return Object.keys(this.char2idx).length;
     }
 
     save() {
