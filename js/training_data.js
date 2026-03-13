@@ -9879,3 +9879,8 @@ window.getDataStats = function() {
     
     return stats;
 };
+
+// 加载飞卢风格数据
+if (typeof BUILTIN_DATA !== 'undefined' && BUILTIN_DATA.feilu_style) {
+    console.log('飞卢风格数据已集成，共', BUILTIN_DATA.feilu_style.length, '条');
+}

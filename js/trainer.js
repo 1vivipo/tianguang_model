@@ -1,6 +1,5 @@
 /**
- * 天光AI - 训练器模块（优化版）
- * 支持快速训练模式
+ * 天光AI - 训练器模块（修复中文输出版）
  */
 
 class TianguangTrainer {
@@ -10,23 +9,21 @@ class TianguangTrainer {
         this.isTraining = false;
         this.shouldStop = false;
         
-        // 默认配置（快速模式）
         this.config = {
             vocabSize: 500,
-            embedDim: 32,      // 减小
-            hiddenDim: 64,     // 减小
-            seqLength: 16,     // 减小
+            embedDim: 32,
+            hiddenDim: 64,
+            seqLength: 16,
             batchSize: 8,
-            epochs: 20,        // 减少轮次
-            learningRate: 0.02, // 增大学习率
-            maxDataSize: 500    // 限制数据量
+            epochs: 20,
+            learningRate: 0.02,
+            maxDataSize: 500
         };
         
         this.trainingData = [];
         this.history = [];
     }
 
-    // 设置训练模式
     setMode(mode) {
         switch(mode) {
             case 'quick':
@@ -68,42 +65,43 @@ class TianguangTrainer {
         }
     }
 
-    // 初始化
     async init() {
         Utils.log('初始化训练器...');
         Utils.log(`TensorFlow.js 版本: ${tf.version.tfjs}`);
         Utils.log(`后端: ${tf.getBackend()}`);
 
-        // 尝试使用WebGL
         if (tf.getBackend() !== 'webgl' && tf.ENV.get('WEBGL_VERSION')) {
             await tf.setBackend('webgl');
             Utils.log('已切换到WebGL后端');
         }
     }
 
-    // 创建分词器
     createTokenizer(texts) {
         this.tokenizer = new SimpleTokenizer();
         this.tokenizer.train(texts, this.config.vocabSize);
         Utils.log(`词汇表大小: ${this.tokenizer.size()}`);
+        
+        // 验证中文支持
+        const testText = "测试中文";
+        const encoded = this.tokenizer.encode(testText);
+        const decoded = this.tokenizer.decode(encoded);
+        Utils.log(`分词器测试: "${testText}" -> [${encoded.slice(0,6)}...] -> "${decoded}"`);
+        
         return this.tokenizer;
     }
 
-    // 创建模型
     async createModel() {
         Utils.log('创建模型...');
         Utils.log(`配置: embed=${this.config.embedDim}, hidden=${this.config.hiddenDim}, seqLen=${this.config.seqLength}`);
 
         const model = tf.sequential();
 
-        // 嵌入层
         model.add(tf.layers.embedding({
             inputDim: this.config.vocabSize,
             outputDim: this.config.embedDim,
             inputLength: this.config.seqLength
         }));
 
-        // GRU层
         model.add(tf.layers.gru({
             units: this.config.hiddenDim,
             returnSequences: true,
@@ -111,7 +109,6 @@ class TianguangTrainer {
             recurrentInitializer: 'glorotNormal'
         }));
 
-        // 输出层
         model.add(tf.layers.timeDistributed({
             layer: tf.layers.dense({
                 units: this.config.vocabSize,
@@ -119,7 +116,6 @@ class TianguangTrainer {
             })
         }));
 
-        // 编译
         model.compile({
             optimizer: tf.train.adam(this.config.learningRate),
             loss: 'sparseCategoricalCrossentropy',
@@ -133,14 +129,11 @@ class TianguangTrainer {
         return model;
     }
 
-    // 准备数据（优化版）
     prepareData(texts) {
         Utils.log('准备训练数据...');
         
-        // 限制数据量
         let limitedTexts = texts;
         if (texts.length > this.config.maxDataSize) {
-            // 随机采样
             limitedTexts = this.shuffleArray([...texts]).slice(0, this.config.maxDataSize);
             Utils.log(`数据采样: ${texts.length} → ${limitedTexts.length} 条`);
         }
@@ -158,7 +151,6 @@ class TianguangTrainer {
                 continue;
             }
 
-            // 填充/截断到 seqLen + 1
             let seq;
             if (encoded.length > seqLen + 1) {
                 seq = encoded.slice(0, seqLen + 1);
@@ -189,7 +181,6 @@ class TianguangTrainer {
         };
     }
 
-    // 数组随机打乱
     shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -198,7 +189,6 @@ class TianguangTrainer {
         return array;
     }
 
-    // 训练（优化版）
     async train(texts, callbacks = {}) {
         if (this.isTraining) {
             Utils.log('训练已在进行中', 'warning');
@@ -256,7 +246,6 @@ class TianguangTrainer {
                             });
                         }
 
-                        // 每5轮输出一次
                         if ((epoch + 1) % 5 === 0 || epoch === 0) {
                             Utils.log(`Epoch ${epoch + 1}/${this.config.epochs} - Loss: ${logs.loss.toFixed(4)} - Acc: ${(logs.acc * 100).toFixed(1)}% - ETA: ${Utils.formatTime(eta)}`);
                         }
@@ -286,26 +275,27 @@ class TianguangTrainer {
         }
     }
 
-    // 估算训练时间
     estimateTime(sampleCount) {
-        const timePerSample = 0.001; // 每个样本每轮约1ms
+        const timePerSample = 0.001;
         const totalTime = sampleCount * this.config.epochs * timePerSample / this.config.batchSize;
         return Utils.formatTime(totalTime);
     }
 
-    // 停止训练
     stop() {
         this.shouldStop = true;
         Utils.log('正在停止训练...', 'warning');
     }
 
-    // 生成文本
+    // 生成文本（修复中文输出）
     async generate(prompt, maxLength = 50, temperature = 0.8) {
         if (!this.model || !this.tokenizer) {
             return '请先训练模型';
         }
 
+        Utils.log(`生成提示: "${prompt}"`);
+
         let tokens = this.tokenizer.encode(prompt);
+        Utils.log(`编码后: [${tokens.slice(0, 10)}...] (长度: ${tokens.length})`);
 
         if (tokens.length > this.config.seqLength - 1) {
             tokens = tokens.slice(-this.config.seqLength + 1);
@@ -327,7 +317,30 @@ class TianguangTrainer {
             const lastPos = Math.min(tokens.length, this.config.seqLength) - 1;
             const probs = output.slice([0, lastPos, 0], [1, 1, this.config.vocabSize]);
 
-            const nextToken = (await tf.multinomial(probs.flatten(), 1).data())[0];
+            // 应用温度
+            const probsData = await probs.data();
+            const scaledProbs = new Float32Array(probsData.length);
+            const maxProb = Math.max(...probsData);
+            let sum = 0;
+            for (let j = 0; j < probsData.length; j++) {
+                scaledProbs[j] = Math.exp((probsData[j] - maxProb) / temperature);
+                sum += scaledProbs[j];
+            }
+            for (let j = 0; j < scaledProbs.length; j++) {
+                scaledProbs[j] /= sum;
+            }
+
+            // 采样
+            let nextToken = 0;
+            const rand = Math.random();
+            let cumProb = 0;
+            for (let j = 0; j < scaledProbs.length; j++) {
+                cumProb += scaledProbs[j];
+                if (rand < cumProb) {
+                    nextToken = j;
+                    break;
+                }
+            }
 
             tokens.push(nextToken);
             generated.push(nextToken);
@@ -336,13 +349,19 @@ class TianguangTrainer {
             output.dispose();
             probs.dispose();
 
-            if (nextToken === 3) break;
+            // 遇到结束符或PAD停止
+            if (nextToken === 3 || nextToken === 0) break;
         }
 
-        return this.tokenizer.decode(generated);
+        Utils.log(`生成了 ${generated.length} 个token`);
+        
+        // 解码
+        const result = this.tokenizer.decode(generated);
+        Utils.log(`解码结果: "${result}"`);
+
+        return result;
     }
 
-    // 保存/加载
     async save() {
         if (!this.model) return null;
         return {
@@ -360,8 +379,10 @@ class TianguangTrainer {
             this.tokenizer.load(data.tokenizer);
             this.history = data.history || [];
             await this.createModel();
+            Utils.log('模型已加载', 'success');
             return true;
         } catch (error) {
+            Utils.log(`加载失败: ${error.message}`, 'error');
             return false;
         }
     }
@@ -377,7 +398,7 @@ class TianguangTrainer {
     }
 }
 
-// 简单分词器
+// 简单分词器（修复中文支持）
 class SimpleTokenizer {
     constructor() {
         this.char2idx = { '<pad>': 0, '<unk>': 1, '<bos>': 2, '<eos>': 3 };
@@ -386,30 +407,72 @@ class SimpleTokenizer {
 
     train(texts, vocabSize) {
         const charFreq = {};
+        
+        // 统计字符频率
         for (const text of texts) {
+            if (!text) continue;
             for (const char of text) {
+                // 确保正确处理中文字符
                 charFreq[char] = (charFreq[char] || 0) + 1;
             }
         }
 
+        // 按频率排序
         const sorted = Object.entries(charFreq).sort((a, b) => b[1] - a[1]);
 
+        // 构建词表
+        let idx = 4; // 从4开始，0-3是特殊token
         for (let i = 0; i < Math.min(sorted.length, vocabSize - 4); i++) {
-            const idx = Object.keys(this.char2idx).length;
-            this.char2idx[sorted[i][0]] = idx;
-            this.idx2char[idx] = sorted[i][0];
+            const char = sorted[i][0];
+            this.char2idx[char] = idx;
+            this.idx2char[idx] = char;
+            idx++;
         }
+
+        console.log(`词表构建完成，共 ${idx} 个token`);
+        
+        // 验证中文支持
+        const chineseChars = Object.keys(this.char2idx).filter(c => /[\u4e00-\u9fa5]/.test(c));
+        console.log(`词表包含 ${chineseChars.length} 个中文字符`);
     }
 
     encode(text) {
-        return [2, ...text.split('').map(c => this.char2idx[c] || 1), 3];
+        if (!text) return [2, 3]; // BOS, EOS
+        
+        const tokens = [2]; // BOS
+        
+        for (const char of text) {
+            const idx = this.char2idx[char];
+            if (idx !== undefined) {
+                tokens.push(idx);
+            } else {
+                tokens.push(1); // UNK
+            }
+        }
+        
+        tokens.push(3); // EOS
+        return tokens;
     }
 
     decode(indices) {
-        return indices
-            .filter(i => i > 3)
-            .map(i => this.idx2char[i] || '')
-            .join('');
+        if (!indices || indices.length === 0) return '';
+        
+        const chars = [];
+        
+        for (const idx of indices) {
+            // 跳过特殊token
+            if (idx <= 3) continue;
+            
+            const char = this.idx2char[idx];
+            if (char && char !== '<unk>') {
+                chars.push(char);
+            } else if (char === '<unk>') {
+                // UNK token，跳过或用占位符
+                // chars.push('□'); // 可选：用占位符表示未知字符
+            }
+        }
+        
+        return chars.join('');
     }
 
     size() {
@@ -417,16 +480,25 @@ class SimpleTokenizer {
     }
 
     save() {
-        return { char2idx: this.char2idx };
+        return { 
+            char2idx: this.char2idx,
+            idx2char: this.idx2char 
+        };
     }
 
     load(data) {
         this.char2idx = data.char2idx;
-        this.idx2char = {};
-        for (const [k, v] of Object.entries(this.char2idx)) {
-            this.idx2char[v] = k;
+        this.idx2char = data.idx2char || {};
+        
+        // 如果没有idx2char，重建它
+        if (Object.keys(this.idx2char).length === 0) {
+            this.idx2char = {};
+            for (const [k, v] of Object.entries(this.char2idx)) {
+                this.idx2char[v] = k;
+            }
         }
     }
 }
 
 window.TianguangTrainer = TianguangTrainer;
+window.SimpleTokenizer = SimpleTokenizer;

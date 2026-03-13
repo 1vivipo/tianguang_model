@@ -1,5 +1,5 @@
 /**
- * 天光AI - 应用主模块
+ * 天光AI - 应用主模块（修复版）
  */
 
 class TianguangApp {
@@ -8,6 +8,7 @@ class TianguangApp {
         this.styleGenerator = null;
         this.currentStyle = 'feilu';
         this.loadedDataCount = 0;
+        this.customTrainingData = []; // 用户添加的训练数据
     }
 
     // 初始化
@@ -22,6 +23,9 @@ class TianguangApp {
         
         // 初始化风格生成器
         this.styleGenerator = new StyleGenerator(this.trainer);
+        
+        // 加载保存的自定义数据
+        this.loadCustomData();
         
         console.log('初始化完成');
     }
@@ -53,9 +57,14 @@ class TianguangApp {
         // 数据管理
         document.getElementById('loadAllDataBtn')?.addEventListener('click', () => this.loadAllData());
         document.getElementById('loadRandomBtn')?.addEventListener('click', () => this.loadRandomData(500));
+        document.getElementById('saveDataBtn')?.addEventListener('click', () => this.saveCustomData());
+        document.getElementById('clearDataBtn')?.addEventListener('click', () => this.clearCustomData());
 
         // 测试
         document.getElementById('testBtn')?.addEventListener('click', () => this.runTest());
+
+        // 结果纠正
+        document.getElementById('addCorrectionBtn')?.addEventListener('click', () => this.addCorrection());
 
         // 聊天
         document.getElementById('sendChatBtn')?.addEventListener('click', () => this.sendChat());
@@ -67,21 +76,22 @@ class TianguangApp {
         document.getElementById('exportModelBtn')?.addEventListener('click', () => this.exportModel());
         document.getElementById('importModelBtn')?.addEventListener('click', () => document.getElementById('modelInput').click());
         document.getElementById('modelInput')?.addEventListener('change', (e) => this.importModel(e));
+
+        // 文件上传
+        document.getElementById('uploadFileBtn')?.addEventListener('click', () => document.getElementById('fileInput').click());
+        document.getElementById('fileInput')?.addEventListener('change', (e) => this.uploadFile(e));
     }
 
     // 显示页面
     showPage(pageName) {
-        // 更新菜单
         document.querySelectorAll('.menu-item').forEach(item => {
             item.classList.toggle('active', item.dataset.page === pageName);
         });
 
-        // 更新页面
         document.querySelectorAll('.page').forEach(page => {
             page.classList.toggle('active', page.id === `page-${pageName}`);
         });
 
-        // 更新标题
         const titles = {
             train: '模型训练',
             data: '数据管理',
@@ -100,6 +110,28 @@ class TianguangApp {
         }
     }
 
+    // 加载保存的自定义数据
+    loadCustomData() {
+        try {
+            const saved = localStorage.getItem('tianguang_custom_data');
+            if (saved) {
+                this.customTrainingData = JSON.parse(saved);
+                console.log(`加载了 ${this.customTrainingData.length} 条自定义数据`);
+            }
+        } catch (e) {
+            console.error('加载自定义数据失败', e);
+        }
+    }
+
+    // 保存自定义数据到本地
+    saveCustomDataToStorage() {
+        try {
+            localStorage.setItem('tianguang_custom_data', JSON.stringify(this.customTrainingData));
+        } catch (e) {
+            console.error('保存自定义数据失败', e);
+        }
+    }
+
     // 加载全部数据
     loadAllData() {
         if (typeof TrainingData === 'undefined') {
@@ -107,33 +139,35 @@ class TianguangApp {
             return;
         }
 
-        const allData = TrainingData.getAllData();
+        let allData = TrainingData.getAllData();
+        
+        // 加上飞卢风格数据
+        if (typeof BUILTIN_DATA !== 'undefined' && BUILTIN_DATA.feilu_style) {
+            allData = allData.concat(BUILTIN_DATA.feilu_style);
+        }
+        
+        // 加上自定义数据
+        if (this.customTrainingData.length > 0) {
+            allData = allData.concat(this.customTrainingData);
+        }
+        
         this.loadedDataCount = allData.length;
         
-        // 显示预览
         const preview = document.getElementById('dataPreview');
         if (preview) {
             preview.innerHTML = allData.slice(0, 20).map(d => 
-                `<div class="data-item">${d.substring(0, 50)}...</div>`
+                `<div class="data-item">${this.escapeHtml(d.substring(0, 50))}...</div>`
             ).join('');
         }
 
-        // 更新统计
         document.getElementById('loadedData').textContent = allData.length;
         
-        // 更新分类统计
-        const categories = TrainingData.getCategories();
-        const categoriesDiv = document.getElementById('dataCategories');
-        if (categoriesDiv) {
-            categoriesDiv.innerHTML = Object.entries(categories).map(([name, count]) => 
-                `<div class="category-item">
-                    <span class="category-name">${name}</span>
-                    <span class="category-count">${count}</span>
-                </div>`
-            ).join('');
+        // 显示自定义数据数量
+        if (this.customTrainingData.length > 0) {
+            this.showNotification(`已加载 ${allData.length} 条数据（含 ${this.customTrainingData.length} 条自定义数据）`);
+        } else {
+            this.showNotification(`已加载 ${allData.length} 条数据`);
         }
-
-        this.showNotification(`已加载 ${allData.length} 条数据`);
     }
 
     // 加载随机数据
@@ -143,7 +177,18 @@ class TianguangApp {
             return;
         }
 
-        const allData = TrainingData.getAllData();
+        let allData = TrainingData.getAllData();
+        
+        // 加上飞卢风格数据
+        if (typeof BUILTIN_DATA !== 'undefined' && BUILTIN_DATA.feilu_style) {
+            allData = allData.concat(BUILTIN_DATA.feilu_style);
+        }
+        
+        // 加上自定义数据（全部保留）
+        if (this.customTrainingData.length > 0) {
+            allData = allData.concat(this.customTrainingData);
+        }
+        
         const shuffled = [...allData].sort(() => Math.random() - 0.5);
         const selected = shuffled.slice(0, count);
         
@@ -152,12 +197,108 @@ class TianguangApp {
         const preview = document.getElementById('dataPreview');
         if (preview) {
             preview.innerHTML = selected.slice(0, 20).map(d => 
-                `<div class="data-item">${d.substring(0, 50)}...</div>`
+                `<div class="data-item">${this.escapeHtml(d.substring(0, 50))}...</div>`
             ).join('');
         }
 
         document.getElementById('loadedData').textContent = selected.length;
         this.showNotification(`已随机加载 ${selected.length} 条数据`);
+    }
+
+    // 保存自定义数据
+    saveCustomData() {
+        const textarea = document.getElementById('dataInput');
+        const text = textarea?.value.trim();
+        
+        if (!text) {
+            this.showNotification('请输入数据', 'error');
+            return;
+        }
+        
+        const lines = text.split('\n').filter(l => l.trim());
+        this.customTrainingData = this.customTrainingData.concat(lines);
+        this.saveCustomDataToStorage();
+        
+        textarea.value = '';
+        this.showNotification(`已添加 ${lines.length} 条数据，共 ${this.customTrainingData.length} 条自定义数据。请重新训练模型！`, 'success');
+        
+        // 显示提示
+        this.showRetrainTip();
+    }
+
+    // 清空自定义数据
+    clearCustomData() {
+        if (confirm('确定要清空所有自定义数据吗？')) {
+            this.customTrainingData = [];
+            this.saveCustomDataToStorage();
+            this.showNotification('已清空自定义数据');
+        }
+    }
+
+    // 上传文件
+    uploadFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target.result;
+            const lines = text.split('\n').filter(l => l.trim());
+            
+            this.customTrainingData = this.customTrainingData.concat(lines);
+            this.saveCustomDataToStorage();
+            
+            this.showNotification(`已从文件添加 ${lines.length} 条数据，共 ${this.customTrainingData.length} 条自定义数据。请重新训练模型！`, 'success');
+            this.showRetrainTip();
+        };
+        reader.readAsText(file);
+    }
+
+    // 添加纠正数据
+    addCorrection() {
+        const textarea = document.getElementById('correctionInput');
+        const text = textarea?.value.trim();
+        
+        if (!text) {
+            this.showNotification('请输入正确的回复内容', 'error');
+            return;
+        }
+        
+        // 添加到自定义训练数据
+        this.customTrainingData.push(text);
+        this.saveCustomDataToStorage();
+        
+        textarea.value = '';
+        
+        // 显示明显的提示
+        this.showNotification('✅ 已添加到训练数据！请重新训练模型才能生效！', 'success');
+        
+        // 显示重新训练提示
+        this.showRetrainTip();
+    }
+
+    // 显示重新训练提示
+    showRetrainTip() {
+        const tip = document.createElement('div');
+        tip.className = 'retrain-tip';
+        tip.innerHTML = `
+            <div class="tip-content">
+                <span class="tip-icon">⚠️</span>
+                <span class="tip-text">数据已更新，需要重新训练模型才能生效！</span>
+                <button class="tip-btn" onclick="app.goToTrain()">去训练</button>
+                <button class="tip-close" onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+        `;
+        document.body.appendChild(tip);
+        
+        // 5秒后自动消失
+        setTimeout(() => tip.remove(), 10000);
+    }
+
+    // 跳转到训练页面
+    goToTrain() {
+        this.showPage('train');
+        document.querySelector('.retrain-tip')?.remove();
     }
 
     // 开始训练
@@ -166,6 +307,17 @@ class TianguangApp {
         let data = [];
         if (typeof TrainingData !== 'undefined') {
             data = TrainingData.getAllData();
+        }
+        
+        // 加上飞卢风格数据
+        if (typeof BUILTIN_DATA !== 'undefined' && BUILTIN_DATA.feilu_style) {
+            data = data.concat(BUILTIN_DATA.feilu_style);
+        }
+        
+        // 加上自定义数据
+        if (this.customTrainingData.length > 0) {
+            data = data.concat(this.customTrainingData);
+            console.log(`包含 ${this.customTrainingData.length} 条自定义数据`);
         }
         
         // 也加上用户自定义数据
@@ -272,10 +424,30 @@ class TianguangApp {
 
         try {
             const result = await this.trainer.generate(prompt, length, temperature);
-            resultDiv.innerHTML = `<div class="generated-text">${prompt}${result}</div>`;
+            
+            // 检查是否乱码
+            let displayResult = result;
+            if (this.isGarbled(result)) {
+                displayResult = `[输出异常，请检查训练数据是否包含中文]\n原始输出: ${result}`;
+            }
+            
+            resultDiv.innerHTML = `
+                <div class="generated-text">
+                    <div class="prompt">${this.escapeHtml(prompt)}</div>
+                    <div class="result">${this.escapeHtml(displayResult)}</div>
+                </div>
+            `;
         } catch (error) {
             resultDiv.innerHTML = `<p class="error">生成失败: ${error.message}</p>`;
         }
+    }
+
+    // 检查是否乱码
+    isGarbled(text) {
+        if (!text) return false;
+        // 检查是否有过多不可打印字符
+        const printable = text.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+        return printable.length < text.length * 0.8;
     }
 
     // 发送聊天
@@ -290,7 +462,7 @@ class TianguangApp {
         // 添加用户消息
         container.innerHTML += `
             <div class="chat-message user">
-                <div class="message-content">${message}</div>
+                <div class="message-content">${this.escapeHtml(message)}</div>
             </div>
         `;
 
@@ -302,13 +474,13 @@ class TianguangApp {
             
             container.innerHTML += `
                 <div class="chat-message assistant">
-                    <div class="message-content">${response}</div>
+                    <div class="message-content">${this.escapeHtml(response)}</div>
                 </div>
             `;
         } catch (error) {
             container.innerHTML += `
                 <div class="chat-message assistant">
-                    <div class="message-content">抱歉，生成回复时出错了。</div>
+                    <div class="message-content">抱歉，生成回复时出错了。请确保模型已训练。</div>
                 </div>
             `;
         }
@@ -345,6 +517,13 @@ class TianguangApp {
         reader.readAsText(file);
     }
 
+    // HTML转义
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // 显示通知
     showNotification(message, type = 'info') {
         const notification = document.getElementById('notification');
@@ -353,7 +532,7 @@ class TianguangApp {
             notification.className = `notification show ${type}`;
             setTimeout(() => {
                 notification.classList.remove('show');
-            }, 3000);
+            }, 5000);
         }
     }
 }
