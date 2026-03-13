@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>天光AI - 自主训练系统</title>
+    <meta name="description" content="天光AI - 手机端自主训练AI模型">
+    <meta name="theme-color" content="#7c3aed">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- 侧边栏 -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">✨</div>
+                <span class="logo-text">天光AI</span>
+            </div>
+            <div class="sidebar-menu">
+                <a href="#" class="menu-item active" data-page="train">
+                    <span class="icon">🧠</span>
+                    <span>模型训练</span>
+                </a>
+                <a href="#" class="menu-item" data-page="data">
+                    <span class="icon">📊</span>
+                    <span>数据管理</span>
+                </a>
+                <a href="#" class="menu-item" data-page="test">
+                    <span class="icon">🧪</span>
+                    <span>测试评估</span>
+                </a>
+                <a href="#" class="menu-item" data-page="chat">
+                    <span class="icon">💬</span>
+                    <span>对话测试</span>
+                </a>
+                <a href="#" class="menu-item" data-page="settings">
+                    <span class="icon">⚙️</span>
+                    <span>系统设置</span>
+                </a>
+            </div>
+            <div class="sidebar-footer">
+                <div class="version">v1.0.0</div>
+            </div>
+        </nav>
+
+        <!-- 主内容 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="topbar">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <h1 class="page-title" id="pageTitle">模型训练</h1>
+                <div class="topbar-actions">
+                    <span class="status-badge" id="statusBadge">就绪</span>
+                </div>
+            </header>
+
+            <!-- 页面内容 -->
+            <div class="page-container">
+                <!-- 训练页面 -->
+                <div class="page active" id="page-train">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>训练参数配置</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>训练轮次 (Epochs)</label>
+                                <input type="number" id="epochs" value="100" min="1" max="1000">
+                                <span class="hint">建议: 50-200</span>
+                            </div>
+                            <div class="form-group">
+                                <label>学习率 (Learning Rate)</label>
+                                <input type="number" id="learningRate" value="0.01" step="0.001" min="0.0001" max="1">
+                                <span class="hint">建议: 0.001-0.1</span>
+                            </div>
+                            <div class="form-group">
+                                <label>批次大小 (Batch Size)</label>
+                                <input type="number" id="batchSize" value="4" min="1" max="32">
+                                <span class="hint">手机建议: 2-8</span>
+                            </div>
+                            <div class="form-group">
+                                <label>序列长度</label>
+                                <input type="number" id="seqLength" value="32" min="8" max="128">
+                            </div>
+                            <div class="form-group">
+                                <label>嵌入维度</label>
+                                <select id="embedDim">
+                                    <option value="32">32 (最小)</option>
+                                    <option value="64" selected>64 (推荐)</option>
+                                    <option value="128">128 (较大)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>训练控制</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="training-status">
+                                <div class="status-row">
+                                    <span class="label">状态</span>
+                                    <span class="value" id="trainStatus">等待开始</span>
+                                </div>
+                                <div class="status-row">
+                                    <span class="label">当前轮次</span>
+                                    <span class="value" id="currentEpoch">0 / 100</span>
+                                </div>
+                                <div class="status-row">
+                                    <span class="label">损失值</span>
+                                    <span class="value" id="currentLoss">-</span>
+                                </div>
+                                <div class="status-row">
+                                    <span class="label">准确率</span>
+                                    <span class="value" id="currentAccuracy">-</span>
+                                </div>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="trainProgress"></div>
+                                </div>
+                                <span class="progress-text" id="progressText">0%</span>
+                            </div>
+                            <div class="button-group">
+                                <button class="btn btn-primary" id="startTrainBtn">
+                                    <span class="icon">▶</span> 开始训练
+                                </button>
+                                <button class="btn btn-secondary" id="stopTrainBtn" disabled>
+                                    <span class="icon">⏹</span> 停止训练
+                                </button>
+                                <button class="btn btn-outline" id="saveModelBtn" disabled>
+                                    <span class="icon">💾</span> 保存模型
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>训练日志</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="log-container" id="trainLog"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据管理页面 -->
+                <div class="page" id="page-data">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>训练数据</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="data-stats">
+                                <div class="stat-item">
+                                    <span class="stat-value" id="dataCount">0</span>
+                                    <span class="stat-label">数据条数</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value" id="vocabSize">0</span>
+                                    <span class="stat-label">词汇表大小</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>数据输入（每行一条）</label>
+                                <textarea id="dataInput" placeholder="人工智能是计算机科学的分支&#10;深度学习是机器学习的重要组成部分&#10;自然语言处理是AI的核心技术"></textarea>
+                            </div>
+                            <div class="button-group">
+                                <button class="btn btn-primary" id="saveDataBtn">
+                                    <span class="icon">💾</span> 保存数据
+                                </button>
+                                <button class="btn btn-secondary" id="uploadFileBtn">
+                                    <span class="icon">📁</span> 上传文件
+                                </button>
+                                <input type="file" id="fileInput" accept=".txt,.json,.csv" hidden>
+                                <button class="btn btn-outline" id="clearDataBtn">
+                                    <span class="icon">🗑</span> 清空数据
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>数据预览</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="data-preview" id="dataPreview">
+                                <p class="empty-hint">暂无数据，请添加训练数据</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 测试评估页面 -->
+                <div class="page" id="page-test">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>模型测试</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>测试提示</label>
+                                <input type="text" id="testPrompt" placeholder="输入测试文本">
+                            </div>
+                            <div class="form-group">
+                                <label>生成长度</label>
+                                <input type="number" id="generateLength" value="50" min="10" max="200">
+                            </div>
+                            <button class="btn btn-primary" id="testBtn">
+                                <span class="icon">🧪</span> 开始测试
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>测试结果</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="test-result" id="testResult">
+                                <p class="empty-hint">训练模型后进行测试</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>评估评分</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="score-panel">
+                                <div class="score-item">
+                                    <span class="score-label">流畅度</span>
+                                    <div class="score-bar">
+                                        <div class="score-fill" id="fluencyScore" style="width: 0%"></div>
+                                    </div>
+                                    <span class="score-value" id="fluencyValue">-</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-label">相关性</span>
+                                    <div class="score-bar">
+                                        <div class="score-fill" id="relevanceScore" style="width: 0%"></div>
+                                    </div>
+                                    <span class="score-value" id="relevanceValue">-</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-label">多样性</span>
+                                    <div class="score-bar">
+                                        <div class="score-fill" id="diversityScore" style="width: 0%"></div>
+                                    </div>
+                                    <span class="score-value" id="diversityValue">-</span>
+                                </div>
+                            </div>
+                            <div class="correction-panel">
+                                <h3>结果纠正</h3>
+                                <textarea id="correctionInput" placeholder="如果生成结果不理想，可以输入正确的文本用于进一步训练"></textarea>
+                                <button class="btn btn-secondary" id="addCorrectionBtn">
+                                    <span class="icon">➕</span> 添加到训练数据
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 对话测试页面 -->
+                <div class="page" id="page-chat">
+                    <div class="card chat-card">
+                        <div class="card-header">
+                            <h2>对话测试</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="chat-container" id="chatContainer">
+                                <div class="chat-message system">
+                                    <div class="message-content">
+                                        你好！我是天光AI。训练完成后，你可以和我对话测试模型效果。
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chat-input-area">
+                                <input type="text" id="chatInput" placeholder="输入消息...">
+                                <button class="btn btn-primary" id="sendChatBtn">
+                                    <span class="icon">📤</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设置页面 -->
+                <div class="page" id="page-settings">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>系统设置</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>计算后端</label>
+                                <select id="backend">
+                                    <option value="webgl">WebGL (推荐)</option>
+                                    <option value="cpu">CPU</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>自动保存间隔</label>
+                                <select id="autoSave">
+                                    <option value="0">关闭</option>
+                                    <option value="5">每5轮</option>
+                                    <option value="10" selected>每10轮</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>日志详细程度</label>
+                                <select id="logLevel">
+                                    <option value="minimal">简洁</option>
+                                    <option value="normal" selected>正常</option>
+                                    <option value="verbose">详细</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>模型管理</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="button-group">
+                                <button class="btn btn-primary" id="exportModelBtn">
+                                    <span class="icon">📤</span> 导出模型
+                                </button>
+                                <button class="btn btn-secondary" id="importModelBtn">
+                                    <span class="icon">📥</span> 导入模型
+                                </button>
+                                <input type="file" id="modelInput" accept=".json" hidden>
+                            </div>
+                            <div class="model-info" id="modelInfo">
+                                <p>暂无已保存的模型</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>关于</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="about-info">
+                                <p><strong>天光AI</strong> - 自主训练系统</p>
+                                <p>版本: 1.0.0</p>
+                                <p>基于 TensorFlow.js 构建</p>
+                                <p>支持手机端GPU加速训练</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 通知 -->
+    <div class="notification" id="notification"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/trainer.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
