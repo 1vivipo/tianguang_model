@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>天光AI - 自主训练系统</title>
-    <meta name="description" content="天光AI - 手机端自主训练AI模型">
+    <meta name="description" content="天光AI - 手机端自主训练AI模型，支持浏览器端训练">
     <meta name="theme-color" content="#7c3aed">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
@@ -66,8 +66,8 @@
                         <div class="card-body">
                             <div class="form-group">
                                 <label>训练轮次 (Epochs)</label>
-                                <input type="number" id="epochs" value="100" min="1" max="1000">
-                                <span class="hint">建议: 50-200</span>
+                                <input type="number" id="epochs" value="50" min="1" max="500">
+                                <span class="hint">建议: 30-100</span>
                             </div>
                             <div class="form-group">
                                 <label>学习率 (Learning Rate)</label>
@@ -76,12 +76,12 @@
                             </div>
                             <div class="form-group">
                                 <label>批次大小 (Batch Size)</label>
-                                <input type="number" id="batchSize" value="4" min="1" max="32">
-                                <span class="hint">手机建议: 2-8</span>
+                                <input type="number" id="batchSize" value="8" min="1" max="32">
+                                <span class="hint">手机建议: 4-16</span>
                             </div>
                             <div class="form-group">
                                 <label>序列长度</label>
-                                <input type="number" id="seqLength" value="32" min="8" max="128">
+                                <input type="number" id="seqLength" value="32" min="8" max="64">
                             </div>
                             <div class="form-group">
                                 <label>嵌入维度</label>
@@ -106,7 +106,7 @@
                                 </div>
                                 <div class="status-row">
                                     <span class="label">当前轮次</span>
-                                    <span class="value" id="currentEpoch">0 / 100</span>
+                                    <span class="value" id="currentEpoch">0 / 50</span>
                                 </div>
                                 <div class="status-row">
                                     <span class="label">损失值</span>
@@ -115,6 +115,10 @@
                                 <div class="status-row">
                                     <span class="label">准确率</span>
                                     <span class="value" id="currentAccuracy">-</span>
+                                </div>
+                                <div class="status-row">
+                                    <span class="label">用时</span>
+                                    <span class="value" id="elapsedTime">-</span>
                                 </div>
                             </div>
                             <div class="progress-container">
@@ -151,7 +155,33 @@
                 <div class="page" id="page-data">
                     <div class="card">
                         <div class="card-header">
-                            <h2>训练数据</h2>
+                            <h2>内置数据集</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="data-categories">
+                                <button class="btn btn-secondary category-btn" data-category="ai">🤖 AI知识 (15条)</button>
+                                <button class="btn btn-secondary category-btn" data-category="programming">💻 编程知识 (15条)</button>
+                                <button class="btn btn-secondary category-btn" data-category="science">🔬 科学知识 (15条)</button>
+                                <button class="btn btn-secondary category-btn" data-category="history">📜 历史文化 (15条)</button>
+                                <button class="btn btn-secondary category-btn" data-category="life">🌱 生活常识 (15条)</button>
+                                <button class="btn btn-secondary category-btn" data-category="business">💼 商业经济 (15条)</button>
+                                <button class="btn btn-secondary category-btn" data-category="technology">🚀 技术趋势 (15条)</button>
+                                <button class="btn btn-secondary category-btn" data-category="literature">🎨 文学艺术 (15条)</button>
+                            </div>
+                            <div class="button-group" style="margin-top: 16px;">
+                                <button class="btn btn-primary" id="loadAllDataBtn">
+                                    <span class="icon">📥</span> 加载全部数据 (120条)
+                                </button>
+                                <button class="btn btn-secondary" id="loadRandomBtn">
+                                    <span class="icon">🎲</span> 随机加载50条
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>当前训练数据</h2>
                         </div>
                         <div class="card-body">
                             <div class="data-stats">
@@ -165,8 +195,8 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>数据输入（每行一条）</label>
-                                <textarea id="dataInput" placeholder="人工智能是计算机科学的分支&#10;深度学习是机器学习的重要组成部分&#10;自然语言处理是AI的核心技术"></textarea>
+                                <label>自定义数据（每行一条）</label>
+                                <textarea id="dataInput" placeholder="可以在这里添加自己的训练数据..."></textarea>
                             </div>
                             <div class="button-group">
                                 <button class="btn btn-primary" id="saveDataBtn">
@@ -189,7 +219,7 @@
                         </div>
                         <div class="card-body">
                             <div class="data-preview" id="dataPreview">
-                                <p class="empty-hint">暂无数据，请添加训练数据</p>
+                                <p class="empty-hint">点击上方按钮加载内置数据，或添加自定义数据</p>
                             </div>
                         </div>
                     </div>
@@ -204,11 +234,16 @@
                         <div class="card-body">
                             <div class="form-group">
                                 <label>测试提示</label>
-                                <input type="text" id="testPrompt" placeholder="输入测试文本">
+                                <input type="text" id="testPrompt" placeholder="输入测试文本，如：人工智能">
                             </div>
                             <div class="form-group">
                                 <label>生成长度</label>
-                                <input type="number" id="generateLength" value="50" min="10" max="200">
+                                <input type="number" id="generateLength" value="30" min="10" max="100">
+                            </div>
+                            <div class="form-group">
+                                <label>温度参数</label>
+                                <input type="number" id="temperature" value="0.8" step="0.1" min="0.1" max="2.0">
+                                <span class="hint">越高越随机，越低越确定</span>
                             </div>
                             <button class="btn btn-primary" id="testBtn">
                                 <span class="icon">🧪</span> 开始测试
@@ -353,6 +388,7 @@
                                 <p>版本: 1.0.0</p>
                                 <p>基于 TensorFlow.js 构建</p>
                                 <p>支持手机端GPU加速训练</p>
+                                <p>无需后端服务器，浏览器端直接训练</p>
                             </div>
                         </div>
                     </div>
@@ -364,6 +400,7 @@
     <!-- 通知 -->
     <div class="notification" id="notification"></div>
 
+    <script src="js/training_data.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/trainer.js"></script>
     <script src="js/app.js"></script>

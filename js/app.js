@@ -5,6 +5,7 @@
 // 全局变量
 let trainer = null;
 let trainingData = [];
+let trainStartTime = 0;
 
 // 初始化
 document.addEventListener('DOMContentLoaded', async () => {
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     Utils.log('系统就绪');
     Utils.log(`后端: ${tf.getBackend()}`);
+    Utils.log('内置120条训练数据，点击"加载全部数据"开始');
 });
 
 // 绑定事件
@@ -44,6 +46,18 @@ function bindEvents() {
     document.getElementById('startTrainBtn').addEventListener('click', startTraining);
     document.getElementById('stopTrainBtn').addEventListener('click', stopTraining);
     document.getElementById('saveModelBtn').addEventListener('click', saveModel);
+
+    // 内置数据加载
+    document.getElementById('loadAllDataBtn').addEventListener('click', loadAllData);
+    document.getElementById('loadRandomBtn').addEventListener('click', loadRandomData);
+    
+    // 分类数据加载
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const category = btn.dataset.category;
+            loadCategoryData(category);
+        });
+    });
 
     // 数据管理
     document.getElementById('saveDataBtn').addEventListener('click', saveData);
@@ -81,17 +95,14 @@ function bindEvents() {
 
 // 切换页面
 function switchPage(page) {
-    // 更新菜单
     document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.toggle('active', item.dataset.page === page);
     });
 
-    // 更新页面
     document.querySelectorAll('.page').forEach(p => {
         p.classList.toggle('active', p.id === `page-${page}`);
     });
 
-    // 更新标题
     const titles = {
         train: '模型训练',
         data: '数据管理',
@@ -100,30 +111,74 @@ function switchPage(page) {
         settings: '系统设置'
     };
     document.getElementById('pageTitle').textContent = titles[page] || page;
-
-    // 关闭侧边栏（移动端）
     document.getElementById('sidebar').classList.remove('open');
 }
 
 // 更新配置
 function updateConfig() {
     if (!trainer) return;
-
-    trainer.config.epochs = parseInt(document.getElementById('epochs').value) || 100;
+    trainer.config.epochs = parseInt(document.getElementById('epochs').value) || 50;
     trainer.config.learningRate = parseFloat(document.getElementById('learningRate').value) || 0.01;
-    trainer.config.batchSize = parseInt(document.getElementById('batchSize').value) || 4;
+    trainer.config.batchSize = parseInt(document.getElementById('batchSize').value) || 8;
     trainer.config.seqLength = parseInt(document.getElementById('seqLength').value) || 32;
     trainer.config.embedDim = parseInt(document.getElementById('embedDim').value) || 64;
+}
+
+// 加载全部内置数据
+function loadAllData() {
+    if (!window.TrainingData) {
+        Utils.notify('数据文件加载失败', 'error');
+        return;
+    }
+    
+    trainingData = TrainingData.getAllData();
+    updateDataUI();
+    Utils.notify(`已加载 ${trainingData.length} 条数据`, 'success');
+    Utils.log(`加载全部数据: ${trainingData.length} 条`);
+}
+
+// 加载随机数据
+function loadRandomData() {
+    if (!window.TrainingData) {
+        Utils.notify('数据文件加载失败', 'error');
+        return;
+    }
+    
+    trainingData = TrainingData.getRandomData(50);
+    updateDataUI();
+    Utils.notify(`已随机加载 ${trainingData.length} 条数据`, 'success');
+    Utils.log(`随机加载数据: ${trainingData.length} 条`);
+}
+
+// 加载分类数据
+function loadCategoryData(category) {
+    if (!window.TrainingData) {
+        Utils.notify('数据文件加载失败', 'error');
+        return;
+    }
+    
+    const data = TrainingData.getCategoryData(category);
+    trainingData = [...trainingData, ...data];
+    updateDataUI();
+    Utils.notify(`已添加 ${data.length} 条${category}数据`, 'success');
+    Utils.log(`添加${category}数据: ${data.length} 条`);
+}
+
+// 更新数据UI
+function updateDataUI() {
+    document.getElementById('dataInput').value = trainingData.join('\n');
+    Utils.storage.set('trainingData', trainingData);
+    updateDataPreview();
 }
 
 // 开始训练
 async function startTraining() {
     if (trainingData.length < 2) {
-        Utils.notify('请先添加至少2条训练数据', 'error');
+        Utils.notify('请先加载训练数据', 'error');
+        switchPage('data');
         return;
     }
 
-    // 更新配置
     updateConfig();
 
     // 更新UI
@@ -131,10 +186,13 @@ async function startTraining() {
     document.getElementById('stopTrainBtn').disabled = false;
     document.getElementById('statusBadge').textContent = '训练中';
     document.getElementById('statusBadge').classList.add('training');
-    document.getElementById('trainStatus').textContent = '训练中...';
+    document.getElementById('trainStatus').textContent = '初始化...';
+    trainStartTime = Date.now();
 
     Utils.clearLog();
     Utils.log('开始训练...');
+    Utils.log(`数据量: ${trainingData.length} 条`);
+    Utils.log(`参数: epochs=${trainer.config.epochs}, lr=${trainer.config.learningRate}, batch=${trainer.config.batchSize}`);
 
     // 开始训练
     await trainer.train(trainingData, {
@@ -144,6 +202,11 @@ async function startTraining() {
             document.getElementById('currentAccuracy').textContent = (data.accuracy * 100).toFixed(1) + '%';
             document.getElementById('trainProgress').style.width = data.progress + '%';
             document.getElementById('progressText').textContent = data.progress.toFixed(1) + '%';
+            document.getElementById('trainStatus').textContent = '训练中...';
+            
+            // 更新用时
+            const elapsed = Math.floor((Date.now() - trainStartTime) / 1000);
+            document.getElementById('elapsedTime').textContent = Utils.formatTime(elapsed);
         },
         onComplete: () => {
             document.getElementById('startTrainBtn').disabled = false;
@@ -160,6 +223,7 @@ async function startTraining() {
             document.getElementById('statusBadge').textContent = '错误';
             document.getElementById('statusBadge').classList.remove('training');
             document.getElementById('trainStatus').textContent = '训练失败';
+            Utils.notify('训练失败: ' + error.message, 'error');
         }
     });
 }
@@ -202,7 +266,7 @@ function saveData() {
 // 加载保存的数据
 function loadSavedData() {
     const saved = Utils.storage.get('trainingData');
-    if (saved && Array.isArray(saved)) {
+    if (saved && Array.isArray(saved) && saved.length > 0) {
         trainingData = saved;
         document.getElementById('dataInput').value = trainingData.join('\n');
         updateDataPreview();
@@ -215,16 +279,18 @@ function updateDataPreview() {
     const count = document.getElementById('dataCount');
 
     if (trainingData.length === 0) {
-        preview.innerHTML = '<p class="empty-hint">暂无数据，请添加训练数据</p>';
+        preview.innerHTML = '<p class="empty-hint">点击上方按钮加载内置数据，或添加自定义数据</p>';
         count.textContent = '0';
+        document.getElementById('vocabSize').textContent = '0';
         return;
     }
 
-    preview.innerHTML = trainingData.map((item, i) => 
-        `<div class="data-item">${i + 1}. ${item}</div>`
-    ).join('');
+    preview.innerHTML = trainingData.slice(0, 20).map((item, i) => 
+        `<div class="data-item">${i + 1}. ${item.slice(0, 50)}${item.length > 50 ? '...' : ''}</div>`
+    ).join('') + (trainingData.length > 20 ? `<p class="hint">...还有 ${trainingData.length - 20} 条数据</p>` : '');
 
     count.textContent = trainingData.length;
+    document.getElementById('vocabSize').textContent = '~' + Math.min(500, trainingData.length * 10);
 }
 
 // 处理文件上传
@@ -271,15 +337,15 @@ function clearData() {
 // 运行测试
 async function runTest() {
     const prompt = document.getElementById('testPrompt').value || '人工智能';
-    const length = parseInt(document.getElementById('generateLength').value) || 50;
+    const length = parseInt(document.getElementById('generateLength').value) || 30;
+    const temperature = parseFloat(document.getElementById('temperature').value) || 0.8;
 
     document.getElementById('testResult').innerHTML = '<p>生成中...</p>';
 
     try {
-        const result = await trainer.generate(prompt, length);
+        const result = await trainer.generate(prompt, length, temperature);
         document.getElementById('testResult').textContent = result;
 
-        // 评估
         const scores = trainer.evaluate(result);
         updateScores(scores);
     } catch (error) {
@@ -322,13 +388,11 @@ async function sendChat() {
 
     if (!message) return;
 
-    // 添加用户消息
     addChatMessage(message, 'user');
     input.value = '';
 
-    // 生成回复
     try {
-        const response = await trainer.generate(message, 50);
+        const response = await trainer.generate(message, 30);
         addChatMessage(response, 'assistant');
     } catch (error) {
         addChatMessage('生成失败，请确保已训练模型', 'system');
@@ -377,8 +441,7 @@ function updateUI() {
     const status = trainer.getStatus();
 
     document.getElementById('dataCount').textContent = trainingData.length;
-    document.getElementById('vocabSize').textContent = status.vocabSize || 0;
-
+    
     if (status.hasModel) {
         document.getElementById('saveModelBtn').disabled = false;
         document.getElementById('modelInfo').innerHTML = `
