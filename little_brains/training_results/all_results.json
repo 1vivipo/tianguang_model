@@ -1,0 +1,14 @@
+{
+  "记忆脑": {
+    "best_score": 100.0,
+    "best_round": 66
+  },
+  "推理脑": {
+    "best_score": 100.0,
+    "best_round": 61
+  },
+  "判断脑": {
+    "best_score": 100.0,
+    "best_round": 78
+  }
+}
