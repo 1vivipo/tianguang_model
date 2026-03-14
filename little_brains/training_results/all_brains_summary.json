@@ -1,0 +1,34 @@
+{
+  "分析脑": {
+    "best_score": 100,
+    "best_round": 93
+  },
+  "决策脑": {
+    "best_score": 100,
+    "best_round": 92
+  },
+  "表达脑": {
+    "best_score": 100,
+    "best_round": 94
+  },
+  "学习脑": {
+    "best_score": 100,
+    "best_round": 91
+  },
+  "情感脑": {
+    "best_score": 100,
+    "best_round": 89
+  },
+  "创意脑": {
+    "best_score": 100,
+    "best_round": 97
+  },
+  "文本理解脑": {
+    "best_score": 100,
+    "best_round": 90
+  },
+  "对话脑": {
+    "best_score": 100,
+    "best_round": 96
+  }
+}
