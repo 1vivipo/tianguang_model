@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: tianguang-ai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: API_KEY
+        value: sk-tianguang-2024-metabrain-v31
+      - key: API_SECRET
+        value: tianguang-secret-key-2024
+      - key: MODEL_NAME
+        value: metabrain-v3.1
