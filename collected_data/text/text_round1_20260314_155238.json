@@ -1,0 +1,34 @@
+[
+  {
+    "type": "text",
+    "keyword": "JavaScript",
+    "content": "JavaScript is a programming language and core technology of the Web, alongside HTML and CSS. It was created by Brendan Eich in 1995. As of 2025, the overwhelming majority of websites uses JavaScript for client side webpage behavior. Web browsers have a dedicated JavaScript engine that executes the client code. These engines are also utilized in some servers and a variety of apps. The most popular runtime system for non-browser usage is Node.js. JavaScript is a high-level, often just-in-time–compiled language that conforms to the ECMAScript standard. It has dynamic typing, prototype-based object-orientation, and first-class functions. It is multi-paradigm, supporting event-driven, functional, and imperative programming styles. It has application programming interfaces for working with text, dates, regular expressions, standard data structures, and the Document Object Model. The ECMAScript standard does not include any input/output, such as networking, storage, or graphics facilities.",
+    "source": "https://en.wikipedia.org/wiki/JavaScript",
+    "title": "JavaScript",
+    "crawled_at": "2026-03-14T15:52:37.483489"
+  },
+  {
+    "type": "text",
+    "keyword": "JavaScript",
+    "content": "JavaScript Category",
+    "source": "https://duckduckgo.com/c/JavaScript",
+    "title": "JavaScript Category",
+    "crawled_at": "2026-03-14T15:52:37.483499"
+  },
+  {
+    "type": "text",
+    "keyword": "JavaScript",
+    "content": "Object-based programming languages",
+    "source": "https://duckduckgo.com/c/Object-based_programming_languages",
+    "title": "Object-based programming languages",
+    "crawled_at": "2026-03-14T15:52:37.483502"
+  },
+  {
+    "type": "text",
+    "keyword": "JavaScript",
+    "content": "Web programming",
+    "source": "https://duckduckgo.com/c/Web_programming",
+    "title": "Web programming",
+    "crawled_at": "2026-03-14T15:52:37.483503"
+  }
+]
