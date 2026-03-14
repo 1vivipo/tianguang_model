@@ -1,0 +1,128 @@
+[
+  {
+    "id": "crawl_79",
+    "keyword": "iOS",
+    "content": "iOS is a mobile operating system created and developed by Apple for its iPhone line of smartphones. It was unveiled in January 2007 alongside the first-generation iPhone, and was released in June 2007. Major versions of iOS are released annually; the current stable version, iOS 26, was released to the public on September 15, 2025. Besides powering iPhone, iOS is the basis for three other operating systems made by Apple: iPadOS, tvOS, and watchOS. iOS formerly also powered iPads until iPadOS was introduced in 2019 and the iPod Touch line of devices until its discontinuation. iOS is the world's second most widely installed mobile operating system, after Android. As of December 2023, Apple's App Store contains more than 3.8 million iOS mobile apps. iOS is based on macOS. Like macOS, it includes components of the Mach microkernel and FreeBSD. It is a Unix-like operating system.",
+    "source": "https://en.wikipedia.org/wiki/iOS",
+    "crawled_at": "2026-03-14T18:31:09.956655"
+  },
+  {
+    "id": "crawl_79_1",
+    "keyword": "iOS",
+    "content": "Mach (kernel)",
+    "source": "https://duckduckgo.com/c/Mach_(kernel)",
+    "crawled_at": "2026-03-14T18:31:09.956684"
+  },
+  {
+    "id": "crawl_79_2",
+    "keyword": "iOS",
+    "content": "Apple Inc. operating systems",
+    "source": "https://duckduckgo.com/c/Apple_Inc._operating_systems",
+    "crawled_at": "2026-03-14T18:31:09.956688"
+  },
+  {
+    "id": "crawl_49_0",
+    "keyword": "Linux",
+    "content": "Linux A family of open-source Unix-like operating systems based on the Linux kernel, an operating...",
+    "source": "https://duckduckgo.com/Linux",
+    "crawled_at": "2026-03-14T18:31:09.965741"
+  },
+  {
+    "id": "crawl_49_1",
+    "keyword": "Linux",
+    "content": "Linux kernel A free and open-source, monolithic, modular, multitasking, Unix-like operating system kernel.",
+    "source": "https://duckduckgo.com/Linux_kernel",
+    "crawled_at": "2026-03-14T18:31:09.965747"
+  },
+  {
+    "id": "crawl_104_0",
+    "keyword": "OCR",
+    "content": "Optical character recognition The electronic or mechanical conversion of images of typed, handwritten or printed text into...",
+    "source": "https://duckduckgo.com/Optical_character_recognition",
+    "crawled_at": "2026-03-14T18:31:10.780748"
+  },
+  {
+    "id": "crawl_104_1",
+    "keyword": "OCR",
+    "content": "OCR-A A font issued in 1966 and first implemented in 1968.",
+    "source": "https://duckduckgo.com/OCR-A",
+    "crawled_at": "2026-03-14T18:31:10.780756"
+  },
+  {
+    "id": "crawl_43",
+    "keyword": "Node.js",
+    "content": "Node.js is a cross-platform, open-source JavaScript runtime environment that can run on Windows, Linux, Unix, macOS, and more. Node.js runs on the V8 JavaScript engine, and executes JavaScript code outside a web browser. According to the Stack Overflow Developer Survey, Node.js is one of the most commonly used web technologies. Node.js lets developers use JavaScript to write command line tools and server-side scripting. The ability to run JavaScript code on the server is often used to generate dynamic web page content before the page is sent to the user's web browser. Consequently, Node.js represents a \"JavaScript everywhere\" paradigm, unifying web-application development around a single programming language, as opposed to using different languages for the server- versus client-side programming.",
+    "source": "https://en.wikipedia.org/wiki/Node.js",
+    "crawled_at": "2026-03-14T18:31:10.797736"
+  },
+  {
+    "id": "crawl_43_1",
+    "keyword": "Node.js",
+    "content": "Linux Foundation projects",
+    "source": "https://duckduckgo.com/c/Linux_Foundation_projects",
+    "crawled_at": "2026-03-14T18:31:10.797749"
+  },
+  {
+    "id": "crawl_43_2",
+    "keyword": "Node.js",
+    "content": "Joyent",
+    "source": "https://duckduckgo.com/c/Joyent",
+    "crawled_at": "2026-03-14T18:31:10.797751"
+  },
+  {
+    "id": "crawl_48",
+    "keyword": "Kubernetes",
+    "content": "Kubernetes, also known as K8s, is an open-source container orchestration system for automating software deployment, scaling, and management. Originally designed by Google, the project is now maintained by a worldwide community of contributors, and the trademark is held by the Cloud Native Computing Foundation. The name Kubernetes comes from the Ancient Greek term κυβερνήτης, kubernḗtēs, which is also the origin of the words cybernetics and governor. \"Kubernetes\" is often abbreviated with the numerical contraction \"K8s\", meaning \"the letter K, followed by 8 letters, followed by s\". Kubernetes assembles one or more computers, either virtual machines or bare metal, into a cluster which can run workloads in containers. It works with various container runtimes, such as containerd and CRI-O. Its suitability for running and managing workloads of all sizes and styles has led to its widespread adoption in clouds and data centers.",
+    "source": "https://en.wikipedia.org/wiki/Kubernetes",
+    "crawled_at": "2026-03-14T18:31:41.814427"
+  },
+  {
+    "id": "crawl_48_1",
+    "keyword": "Kubernetes",
+    "content": "Docker (software) - Docker is a set of products that uses operating-system-level virtualization to deliver software in packages called containers. Docker automates the deployment of applications within lightweight containers, enabling them to run consistently across different computing environments.",
+    "source": "https://duckduckgo.com/Docker_(software)",
+    "crawled_at": "2026-03-14T18:31:41.814435"
+  },
+  {
+    "id": "crawl_48_2",
+    "keyword": "Kubernetes",
+    "content": "Open Service Mesh - Open Service Mesh was a free and open source cloud native service mesh developed by Microsoft that ran on Kubernetes.",
+    "source": "https://duckduckgo.com/Open_Service_Mesh",
+    "crawled_at": "2026-03-14T18:31:41.814436"
+  },
+  {
+    "id": "crawl_51",
+    "keyword": "GitHub",
+    "content": "GitHub is a proprietary developer platform that allows developers to create, store, manage, and share their code. It uses Git to provide distributed version control and GitHub itself provides access control, bug tracking, software feature requests, task management, continuous integration, and wikis for every project. GitHub is operated by Github, Inc., a subsidiary of Microsoft since 2018 which is headquartered in San Francisco. It is commonly used to host open source software development projects. As of January 2023, GitHub reported having over 100 million developers and more than 420 million repositories, including at least 28 million public repositories. It is the world's largest source code host as of June 2023. Over five billion developer contributions were made to more than 500 million open source projects in 2024.",
+    "source": "https://en.wikipedia.org/wiki/GitHub",
+    "crawled_at": "2026-03-14T18:31:43.139730"
+  },
+  {
+    "id": "crawl_51_1",
+    "keyword": "GitHub",
+    "content": "GitHub Category",
+    "source": "https://duckduckgo.com/c/GitHub",
+    "crawled_at": "2026-03-14T18:31:43.139739"
+  },
+  {
+    "id": "crawl_51_2",
+    "keyword": "GitHub",
+    "content": "Collaborative innovation network - A collaborative innovation network is a collaborative innovation practice that uses internet platforms to promote communication and innovation within self-organizing virtual teams.",
+    "source": "https://duckduckgo.com/Collaborative_innovation_network",
+    "crawled_at": "2026-03-14T18:31:43.139741"
+  },
+  {
+    "id": "crawl_104_0",
+    "keyword": "OCR",
+    "content": "Optical character recognition The electronic or mechanical conversion of images of typed, handwritten or printed text into...",
+    "source": "https://duckduckgo.com/Optical_character_recognition",
+    "crawled_at": "2026-03-14T18:31:43.252234"
+  },
+  {
+    "id": "crawl_104_1",
+    "keyword": "OCR",
+    "content": "OCR-A A font issued in 1966 and first implemented in 1968.",
+    "source": "https://duckduckgo.com/OCR-A",
+    "crawled_at": "2026-03-14T18:31:43.252242"
+  }
+]
