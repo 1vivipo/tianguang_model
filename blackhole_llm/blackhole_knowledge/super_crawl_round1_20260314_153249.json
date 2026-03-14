@@ -1,0 +1,79 @@
+[
+  {
+    "id": "crawl_31",
+    "keyword": "TypeScript",
+    "content": "TypeScript is a high-level programming language that adds static typing with optional type annotations to JavaScript. It is designed for developing large applications. It transpiles to JavaScript. It is developed by Microsoft as free and open-source software released under an Apache License 2.0. TypeScript may be used to develop JavaScript applications for both client-side and server-side execution. Multiple options are available for transpiling. The default TypeScript Compiler can be used, or the Babel compiler can be invoked to convert TypeScript to JavaScript. TypeScript supports definition files that can contain type information of existing JavaScript libraries, much like C++ header files can describe the structure of existing object files. This enables other programs to use the values defined in the files as if they were statically typed TypeScript entities. There are third-party header files for popular libraries such as jQuery, MongoDB, and D3.js.",
+    "source": "https://en.wikipedia.org/wiki/TypeScript",
+    "crawled_at": "2026-03-14T15:32:47.988940"
+  },
+  {
+    "id": "crawl_31_1",
+    "keyword": "TypeScript",
+    "content": "Dart - Dart is a programming language designed by Lars Bak and Kasper Lund and developed by Google. It can be used to develop web and mobile apps as well as server and desktop applications. Dart is an object-oriented, class-based, garbage-collected language with C-style syntax.",
+    "source": "https://duckduckgo.com/Dart_(programming_language)",
+    "crawled_at": "2026-03-14T15:32:47.988951"
+  },
+  {
+    "id": "crawl_31_2",
+    "keyword": "TypeScript",
+    "content": "Kotlin - Kotlin is a cross-platform, statically typed, general-purpose high-level programming language with type inference. Kotlin is designed to interoperate fully with Java, and the JVM version of Kotlin's standard library depends on the Java Class Library.",
+    "source": "https://duckduckgo.com/Kotlin",
+    "crawled_at": "2026-03-14T15:32:47.988954"
+  },
+  {
+    "id": "crawl_32_0",
+    "keyword": "PHP",
+    "content": "PHP A general-purpose scripting language geared towards web development.",
+    "source": "https://duckduckgo.com/PHP",
+    "crawled_at": "2026-03-14T15:32:48.399108"
+  },
+  {
+    "id": "crawl_32_1",
+    "keyword": "PHP",
+    "content": "Pigeonhole principle In mathematics, the pigeonhole principle states that if n items are put into m containers, with n...",
+    "source": "https://duckduckgo.com/Pigeonhole_principle",
+    "crawled_at": "2026-03-14T15:32:48.399115"
+  },
+  {
+    "id": "crawl_53_0",
+    "keyword": "REST",
+    "content": "Representational state transfer A software architectural style that was created to describe the design and guide the development...",
+    "source": "https://duckduckgo.com/REST",
+    "crawled_at": "2026-03-14T15:32:48.977594"
+  },
+  {
+    "id": "crawl_53_1",
+    "keyword": "REST",
+    "content": "Rest (music) The absence of a sound for a defined period of time in music, or one of the musical notation...",
+    "source": "https://duckduckgo.com/Rest_(music)",
+    "crawled_at": "2026-03-14T15:32:48.977636"
+  },
+  {
+    "id": "crawl_26_0",
+    "keyword": "Java",
+    "content": "Java Java is one of the Greater Sunda Islands in the South East Asian country of Indonesia.",
+    "source": "https://duckduckgo.com/Java",
+    "crawled_at": "2026-03-14T15:32:49.604505"
+  },
+  {
+    "id": "crawl_26_1",
+    "keyword": "Java",
+    "content": "Java (programming language) A high-level, general-purpose, memory-safe, object-oriented programming language.",
+    "source": "https://duckduckgo.com/Java_(programming_language)",
+    "crawled_at": "2026-03-14T15:32:49.604513"
+  },
+  {
+    "id": "crawl_33_0",
+    "keyword": "Ruby",
+    "content": "Ruby A pinkish-red-to-blood-red-colored gemstone, a variety of the mineral corundum.",
+    "source": "https://duckduckgo.com/Ruby",
+    "crawled_at": "2026-03-14T15:32:49.606667"
+  },
+  {
+    "id": "crawl_33_1",
+    "keyword": "Ruby",
+    "content": "Ruby Ridge The site of a siege of a cabin occupied by the Weaver family in Boundary County, Idaho, in August...",
+    "source": "https://duckduckgo.com/Ruby_Ridge",
+    "crawled_at": "2026-03-14T15:32:49.606674"
+  }
+]

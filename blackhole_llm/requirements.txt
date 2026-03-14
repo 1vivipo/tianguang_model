@@ -1,10 +1,16 @@
-# 黑洞 Blackhole LLM - 精简依赖（Railway免费版）
+# 黑洞 Blackhole LLM 依赖
 
-# 核心依赖（必须）
-flask==2.3.3
-flask-cors==4.0.0
-requests==2.31.0
-gunicorn==21.2.0
+# Web框架
+flask>=2.0.0
+flask-cors>=3.0.0
 
-# 注意：jieba、beautifulsoup4、lxml 先不装
-# 等跑起来后再按需添加
+# 爬虫
+requests>=2.25.0
+beautifulsoup4>=4.9.0
+lxml>=4.6.0
+
+# NLP
+jieba>=0.42.0
+
+# 生产服务器
+gunicorn>=20.0.0
