@@ -1,0 +1,62 @@
+{
+  "memory": {
+    "count": 50,
+    "avg_score": 99.5,
+    "max_score": 100.0,
+    "top_brains": [
+      "memory_001",
+      "memory_003",
+      "memory_004",
+      "memory_005",
+      "memory_006"
+    ]
+  },
+  "reasoning": {
+    "count": 50,
+    "avg_score": 100.0,
+    "max_score": 100.0,
+    "top_brains": [
+      "reasoning_001",
+      "reasoning_002",
+      "reasoning_003",
+      "reasoning_004",
+      "reasoning_005"
+    ]
+  },
+  "judgment": {
+    "count": 50,
+    "avg_score": 100.0,
+    "max_score": 100.0,
+    "top_brains": [
+      "judgment_001",
+      "judgment_002",
+      "judgment_003",
+      "judgment_004",
+      "judgment_005"
+    ]
+  },
+  "decision": {
+    "count": 50,
+    "avg_score": 100.0,
+    "max_score": 100.0,
+    "top_brains": [
+      "decision_001",
+      "decision_002",
+      "decision_003",
+      "decision_004",
+      "decision_005"
+    ]
+  },
+  "expression": {
+    "count": 50,
+    "avg_score": 100.0,
+    "max_score": 100.0,
+    "top_brains": [
+      "expression_001",
+      "expression_002",
+      "expression_003",
+      "expression_004",
+      "expression_005"
+    ]
+  }
+}
